@@ -36,7 +36,7 @@ const searchSongs = async (req, res) => {
         const token = await getSpotifyToken();
         
         // Spotify Resmi Arama Adresi
-        const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=10`;
+        const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=50`;
         
         const response = await axios.get(url, {
             headers: { 'Authorization': 'Bearer ' + token }
