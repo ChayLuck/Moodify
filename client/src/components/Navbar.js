@@ -35,6 +35,10 @@ const Navbar = () => {
                 Profilim
               </Link>
 
+              <Link to="/songs" className="hover:text-green-400 transition">
+                Şarkılar
+              </Link>
+
               <div className="flex items-center gap-4 border-l border-gray-700 pl-4">
                 <span className="text-gray-400 text-sm hidden md:block">
                   {user.username}
@@ -58,6 +62,7 @@ const Navbar = () => {
               <Link to="/signup" className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-green-500/20">
                 Kayıt Ol
               </Link>
+              
             </>
           )}
 
