@@ -59,7 +59,7 @@ const getNewReleases = async (req, res) => {
             id: album.id,
             name: album.name,
             artist: album.artists[0].name,
-            image: album.images[1].url, // Orta boy resim
+            image: album.images[0].url, // Orta boy resim
             url: album.external_urls.spotify
         }));
 
