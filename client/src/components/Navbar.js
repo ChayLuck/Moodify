@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 
+const user = JSON.parse(localStorage.getItem('user'));
+
 const Navbar = () => {
   return (
     <nav className="bg-gray-900 text-white p-4 shadow-md">
