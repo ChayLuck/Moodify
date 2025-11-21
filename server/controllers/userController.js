@@ -128,4 +128,23 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-module.exports = { searchSpotify, addFavoriteTrack, getUserProfile };
+const removeFavoriteTrack = async (req, res) => {
+    const { userId, trackId } = req.body; // trackId = Silinecek şarkının Spotify ID'si
+
+    try {
+        const user = await User.findById(userId);
+        
+        // Listeyi filtrele: Silinecek ID hariç diğerlerini tut
+        user.favoriteTracks = user.favoriteTracks.filter(id => id !== trackId);
+        
+        await user.save();
+        
+        res.json({ message: "Şarkı favorilerden kaldırıldı." });
+    } catch (error) {
+        console.error("Silme Hatası:", error);
+        res.status(500).json({ message: "Sunucu hatası" });
+    }
+};
+
+// 👇 module.exports KISMINI GÜNCELLEMEYİ UNUTMA!
+module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack };
