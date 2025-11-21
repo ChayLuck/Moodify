@@ -1,12 +1,12 @@
+// server/controllers/userController.js
 const axios = require('axios');
 const User = require('../models/User');
+const Track = require('../models/Track'); // <-- BU EKLENDİ
 const qs = require('qs');
 
 // --- YARDIMCI: SPOTIFY TOKEN AL ---
 const getSpotifyToken = async () => {
-    // 👇 İŞTE RESMİ TOKEN ADRESİ
-    const url = 'https://accounts.spotify.com/api/token'; 
-    
+    const url = 'https://accounts.spotify.com/api/token'; // RESMİ TOKEN ADRESİ
     const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
     
     try {
@@ -23,7 +23,7 @@ const getSpotifyToken = async () => {
     }
 };
 
-// @desc    Spotify'da Şarkı Ara (Bunu da buraya ekleyelim ki eksik kalmasın)
+// @desc    Spotify'da Şarkı Ara
 // @route   GET /api/users/search?q=...
 const searchSpotify = async (req, res) => {
     const query = req.query.q;
@@ -31,7 +31,6 @@ const searchSpotify = async (req, res) => {
 
     try {
         const token = await getSpotifyToken();
-        // 👇 RESMİ ARAMA ADRESİ
         const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=50`; 
         
         const response = await axios.get(url, {
@@ -39,7 +38,7 @@ const searchSpotify = async (req, res) => {
         });
 
         const tracks = response.data.tracks.items.map(track => ({
-            id: track.id, // Frontend'de key olarak ve favori eklerken lazım
+            id: track.id, 
             name: track.name,
             artist: track.artists[0].name,
             image: track.album.images[0]?.url,
@@ -53,15 +52,30 @@ const searchSpotify = async (req, res) => {
     }
 };
 
-// @desc    Favorilere SADECE ID Ekle
+// @desc    Favorilere Ekle (Hem User hem Track tablosuna)
 // @route   POST /api/users/favorites/add
 const addFavoriteTrack = async (req, res) => {
+    // Frontend'den gelen veriyi alıyoruz
     const { userId, track } = req.body; 
 
     try {
+        // 1. ADIM: Şarkıyı 'Tracks' tablosuna kaydet (Yedekleme & İstatistik İçin)
+        // upsert: true -> Varsa güncelle, yoksa yeni oluştur
+        await Track.findOneAndUpdate(
+            { spotifyId: track.id }, 
+            {
+                spotifyId: track.id,
+                title: track.name, // Frontend 'name' yolluyor, biz 'title' kaydediyoruz
+                artist: track.artist,
+                albumCover: track.image,
+                previewUrl: track.previewUrl
+            },
+            { upsert: true, new: true }
+        );
+
+        // 2. ADIM: Kullanıcının listesine ID'yi ekle
         const user = await User.findById(userId);
         
-        // track.id string olarak geliyor, direkt diziye ekleyelim
         if (!user.favoriteTracks.includes(track.id)) {
             user.favoriteTracks.push(track.id);
             await user.save();
@@ -75,6 +89,22 @@ const addFavoriteTrack = async (req, res) => {
     }
 };
 
+// @desc    Favorilerden Şarkı Çıkar
+// @route   POST /api/users/favorites/remove
+const removeFavoriteTrack = async (req, res) => {
+    const { userId, trackId } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+        user.favoriteTracks = user.favoriteTracks.filter(id => id !== trackId);
+        await user.save();
+        res.json({ message: "Şarkı favorilerden kaldırıldı." });
+    } catch (error) {
+        console.error("Silme Hatası:", error);
+        res.status(500).json({ message: "Sunucu hatası" });
+    }
+};
+
 // @desc    Profil + Spotify'dan Şarkı Detayları
 // @route   GET /api/users/profile/:id
 const getUserProfile = async (req, res) => {
@@ -84,38 +114,28 @@ const getUserProfile = async (req, res) => {
 
         const trackIds = user.favoriteTracks;
 
-        // Eğer favori yoksa direkt dön
         if (!trackIds || trackIds.length === 0) {
             return res.json({ ...user._doc, favoriteTracks: [] });
         }
 
         // --- SPOTIFY'DAN DETAY ÇEKME ---
         const token = await getSpotifyToken();
-        
-        // ID'leri virgülle birleştir (id1,id2,id3)
         const idsString = trackIds.join(','); 
 
-        // 👇 HATANIN ÇIKTIĞI YERİ DÜZELTTİK:
-        // 1. Resmi adres: https://api.spotify.com/v1/tracks
-        // 2. Template literal kullanımı: `...ids=${idsString}`
         const spotifyUrl = `https://api.spotify.com/v1/tracks?ids=${idsString}`;
         
-        console.log("Spotify'a gidiliyor:", spotifyUrl); // Kontrol için log
-
         const spotifyRes = await axios.get(spotifyUrl, {
             headers: { 'Authorization': 'Bearer ' + token }
         });
 
-        // Gelen veriyi düzenle
         const detailedTracks = spotifyRes.data.tracks.map(t => ({
-            _id: t.id, // Frontend key için
+            _id: t.id, 
             title: t.name,
             artist: t.artists[0].name,
             albumCover: t.album.images[0]?.url,
             previewUrl: t.preview_url
         }));
 
-        // Kullanıcı verisiyle birleştir
         res.json({
             ...user._doc,
             favoriteTracks: detailedTracks
@@ -123,28 +143,8 @@ const getUserProfile = async (req, res) => {
 
     } catch (error) {
         console.error("Profil Hatası:", error.message);
-        if (error.response) console.error("API Detay:", error.response.data);
         res.status(500).json({ message: "Profil yüklenirken hata oluştu" });
     }
 };
 
-const removeFavoriteTrack = async (req, res) => {
-    const { userId, trackId } = req.body; // trackId = Silinecek şarkının Spotify ID'si
-
-    try {
-        const user = await User.findById(userId);
-        
-        // Listeyi filtrele: Silinecek ID hariç diğerlerini tut
-        user.favoriteTracks = user.favoriteTracks.filter(id => id !== trackId);
-        
-        await user.save();
-        
-        res.json({ message: "Şarkı favorilerden kaldırıldı." });
-    } catch (error) {
-        console.error("Silme Hatası:", error);
-        res.status(500).json({ message: "Sunucu hatası" });
-    }
-};
-
-// 👇 module.exports KISMINI GÜNCELLEMEYİ UNUTMA!
 module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack };
