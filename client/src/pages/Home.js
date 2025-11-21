@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Home = () => {
   const [movies, setMovies] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const navigate = useNavigate();
+  // Kullanıcı giriş yapmış mı?
+  const user = JSON.parse(localStorage.getItem('user'));
 
   // Sayfa açılınca verileri çek
   useEffect(() => {
@@ -18,7 +22,7 @@ const Home = () => {
         setSongs(songRes.data);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Veri çekme hatası:", error);
         setLoading(false);
       }
     };
@@ -26,45 +30,81 @@ const Home = () => {
     fetchData();
   }, []);
 
+  // --- FAVORİYE EKLEME FONKSİYONU ---
+  const addToFavorites = async (song) => {
+    // 1. Giriş Kontrolü
+    if (!user) {
+        if(window.confirm("Favorilere eklemek için giriş yapmalısınız. Giriş sayfasına gitmek ister misiniz?")) {
+            navigate('/login');
+        }
+        return;
+    }
+
+    try {
+        // 2. Backend'e Gönder
+        // Not: New Releases genelde 'Album' döner, previewUrl olmayabilir.
+        await axios.post('http://localhost:5000/api/users/favorites/add', {
+            userId: user._id,
+            track: {
+                id: song.id,
+                name: song.name,
+                artist: song.artist,
+                image: song.image,
+                previewUrl: null // Albümlerde genelde preview olmaz
+            }
+        });
+        
+        alert(`"${song.name}" favorilere eklendi! ❤️`);
+
+    } catch (error) {
+        alert(error.response?.data?.message || "Bir hata oluştu.");
+    }
+  };
+
   return (
     <div className="bg-gray-900 min-h-screen text-white pb-20">
       
-      {/* --- HERO SECTION (KARŞILAMA) --- */}
-      <div className="relative bg-gradient-to-r from-green-900 to-gray-900 py-24 px-6 text-center">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-pulse text-green-400">
+      {/* --- HERO SECTION --- */}
+      <div className="relative bg-gradient-to-r from-green-900 to-gray-900 py-24 px-6 text-center shadow-2xl">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 animate-pulse">
           Moodify
         </h1>
-        <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-8">
-          Discover movies and music that perfectly match your current mood.
-          <br /> Don't know what to watch? Let your feelings decide.
+        <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+          Ruh haline göre Film ve Müzik keşfet. <br /> 
+          Bugün nasıl hissediyorsun?
         </p>
         
         <div className="flex justify-center gap-4">
-            {/* Eğer kullanıcı giriş yaptıysa Dashboard'a, yapmadıysa Kayıt'a gitsin */}
-           {localStorage.getItem('user') ? (
-             <Link to="/dashboard" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105">
-               Get Recommendations 🚀
+           {user ? (
+             <Link to="/dashboard" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-green-500/50">
+               Tavsiye Al 🚀
              </Link>
            ) : (
-             <Link to="/signup" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105">
-               Join Now - It's Free
+             <Link to="/signup" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-green-500/50">
+               Hemen Başla - Ücretsiz
              </Link>
            )}
         </div>
       </div>
 
       {/* --- TRENDING MOVIES --- */}
-      <div className="container mx-auto px-6 mt-12">
-        <h2 className="text-3xl font-bold mb-6 border-l-4 border-green-500 pl-4">🔥 Trending Movies</h2>
+      <div className="container mx-auto px-6 mt-16">
+        <h2 className="text-3xl font-bold mb-8 border-l-4 border-green-500 pl-4 flex items-center gap-2">
+            🔥 Trend Filmler
+        </h2>
         
-        {loading ? <p>Loading...</p> : (
+        {loading ? <p className="text-center text-gray-500">Yükleniyor...</p> : (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {movies.map((movie) => (
-              <div key={movie.id} className="bg-gray-800 rounded-lg overflow-hidden hover:shadow-green-500/50 hover:shadow-lg transition duration-300">
-                <img src={movie.poster} alt={movie.title} className="w-full h-64 object-cover" />
-                <div className="p-3">
-                  <h3 className="font-bold truncate">{movie.title}</h3>
-                  <span className="text-yellow-400 text-sm">⭐ {movie.rating.toFixed(1)}</span>
+              <div key={movie.id} className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group">
+                <div className="relative">
+                    <img src={movie.poster} alt={movie.title} className="w-full h-64 object-cover" />
+                    <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">
+                        ⭐ {movie.rating.toFixed(1)}
+                    </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold truncate text-lg group-hover:text-green-400 transition">{movie.title}</h3>
                 </div>
               </div>
             ))}
@@ -73,18 +113,44 @@ const Home = () => {
       </div>
 
       {/* --- NEW RELEASES (MUSIC) --- */}
-      <div className="container mx-auto px-6 mt-16">
-        <h2 className="text-3xl font-bold mb-6 border-l-4 border-green-500 pl-4">🎵 New Music Releases</h2>
+      <div className="container mx-auto px-6 mt-20">
+        <h2 className="text-3xl font-bold mb-8 border-l-4 border-green-500 pl-4 flex items-center gap-2">
+            🎵 Yeni Çıkanlar
+        </h2>
         
-        {loading ? <p>Loading...</p> : (
+        {loading ? <p className="text-center text-gray-500">Yükleniyor...</p> : (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {songs.map((song) => (
-              <div key={song.id} className="bg-gray-800 rounded-lg overflow-hidden hover:shadow-green-500/50 hover:shadow-lg transition duration-300">
-                <img src={song.image} alt={song.name} className="w-full h-64 object-cover" />
-                <div className="p-3">
-                  <h3 className="font-bold truncate">{song.name}</h3>
+              <div key={song.id} className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-blue-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative">
+                
+                {/* Resim Alanı */}
+                <div className="relative">
+                    <img src={song.image} alt={song.name} className="w-full h-64 object-cover transition duration-300 group-hover:opacity-80" />
+                    
+                    {/* 💖 FAVORİ BUTONU (Overlay) */}
+                    <button 
+                        onClick={() => addToFavorites(song)}
+                        className="absolute top-2 right-2 bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-lg transform hover:scale-110"
+                        title="Favorilere Ekle"
+                    >
+                        ❤️
+                    </button>
+
+                    {/* Spotify Linki (Overlay) */}
+                    <a 
+                        href={song.url} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="absolute bottom-2 right-2 bg-green-500 text-black p-2 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-lg transform hover:scale-110"
+                        title="Spotify'da Aç"
+                    >
+                        🎧
+                    </a>
+                </div>
+
+                <div className="p-4">
+                  <h3 className="font-bold truncate text-lg text-white group-hover:text-blue-400 transition">{song.name}</h3>
                   <p className="text-gray-400 text-sm truncate">{song.artist}</p>
-                  <a href={song.url} target="_blank" rel="noreferrer" className="text-green-400 text-xs mt-2 block hover:underline">Listen on Spotify ↗</a>
                 </div>
               </div>
             ))}

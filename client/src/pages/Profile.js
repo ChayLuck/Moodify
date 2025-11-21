@@ -8,23 +8,22 @@ const Profile = () => {
   
   const navigate = useNavigate();
   
-  // Kullanıcıyı hafızadan al (useEffect dışında da lazım olabilir)
+  // Kullanıcıyı hafızadan al
   const currentUser = JSON.parse(localStorage.getItem('user'));
+  // Sadece ID'yi al (Dependency array hatası vermesin diye)
+  const currentUserId = currentUser ? currentUser._id : null;
 
   useEffect(() => {
-    // Eğer giriş yapmamışsa Login'e at
-    if (!currentUser) {
+    if (!currentUserId) {
       navigate('/login');
       return;
     }
 
     const fetchProfile = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/users/profile/${currentUser._id}`);
+        const res = await axios.get(`http://localhost:5000/api/users/profile/${currentUserId}`);
         
-        // Konsol kontrolü (Debug)
-        console.log("Backend'den Gelen Profil:", res.data);
-        console.log("Favori Şarkılar Dizisi:", res.data.favoriteTracks);
+        console.log("Profil Verisi:", res.data); // Kontrol için
 
         setUserProfile(res.data);
         setLoading(false);
@@ -36,9 +35,9 @@ const Profile = () => {
 
     fetchProfile();
 
-  }, [navigate]); // currentUser dependency olarak eklenmez çünkü local variable
+  }, [navigate, currentUserId]); 
 
-  // --- FAVORİ SİLME FONKSİYONU (YENİ EKLENDİ) ---
+  // --- FAVORİ SİLME FONKSİYONU ---
   const handleRemoveFavorite = async (trackId) => {
     // 1. Onay İste
     if (!window.confirm("Bu şarkıyı favorilerden kaldırmak istediğine emin misin?")) {
@@ -48,7 +47,7 @@ const Profile = () => {
     try {
       // 2. Backend'e silme isteği at
       await axios.post('http://localhost:5000/api/users/favorites/remove', {
-        userId: currentUser._id,
+        userId: currentUserId,
         trackId: trackId
       });
 
@@ -74,12 +73,17 @@ const Profile = () => {
         <div className="h-32 bg-gradient-to-r from-green-600 to-blue-900"></div>
         
         <div className="px-8 pb-8">
-          {/* --- PROFİL BİLGİLERİ --- */}
+          {/* --- PROFİL BİLGİLERİ (Avatar Seçimi Kaldırıldı) --- */}
           <div className="relative -top-12 flex flex-col items-center">
             
-            {/* Profil Yuvarlağı */}
-            <div className="w-24 h-24 bg-gray-900 rounded-full border-4 border-gray-800 flex items-center justify-center text-4xl font-bold text-green-500 shadow-xl">
-              {userProfile?.username?.charAt(0).toUpperCase()}
+            {/* Profil Resmi (Sadece Gösterim) */}
+            <div className="w-32 h-32 bg-gray-900 rounded-full border-4 border-gray-800 flex items-center justify-center text-5xl font-bold text-green-500 shadow-xl">
+              {/* Eğer kullanıcı resim yüklemişse göster, yoksa baş harfi */}
+              {userProfile?.profileImage ? (
+                 <img src={userProfile.profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                 userProfile?.username?.charAt(0).toUpperCase()
+              )}
             </div>
             
             <h1 className="text-3xl font-bold mt-4">{userProfile?.username}</h1>
@@ -90,7 +94,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Alt Kutular */}
+          {/* --- KUTULAR --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-gray-700 pt-6">
             
             {/* --- FAVORİLER KUTUSU --- */}
@@ -104,10 +108,10 @@ const Profile = () => {
                   {userProfile.favoriteTracks.map((track) => (
                     <div key={track._id} className="flex items-center gap-4 bg-gray-800 p-3 rounded-lg hover:bg-gray-700 transition group relative">
                       
-                      {/* Resim (Varsa albumCover, yoksa image, yoksa placeholder) */}
+                      {/* Resim */}
                       <div className="relative w-12 h-12 flex-shrink-0">
                           <img 
-                              src={track.albumCover || track.image || "https://via.placeholder.com/150"} 
+                              src={track.albumCover || "https://via.placeholder.com/150"} 
                               alt={track.title} 
                               className="w-full h-full object-cover rounded-md" 
                           />
@@ -115,13 +119,13 @@ const Profile = () => {
 
                       {/* Bilgiler */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-white truncate">{track.title || track.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{track.artist}</p>
+                        <p className="font-bold text-sm text-white truncate">{track.title || "İsimsiz"}</p>
+                        <p className="text-xs text-gray-400 truncate">{track.artist || "Bilinmiyor"}</p>
                       </div>
 
                       {/* Butonlar */}
                       <div className="flex items-center gap-2">
-                          {/* Dinle Butonu */}
+                          {/* Dinle */}
                           {track.previewUrl && (
                               <a 
                                   href={track.previewUrl} 
@@ -133,7 +137,7 @@ const Profile = () => {
                               </a>
                           )}
 
-                          {/* ❌ SİLME BUTONU (YENİ) */}
+                          {/* ❌ SİLME BUTONU */}
                           <button 
                             onClick={() => handleRemoveFavorite(track._id)}
                             className="w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:bg-red-600 hover:text-white transition"

@@ -3,9 +3,9 @@ const User = require('../models/User');
 const Track = require('../models/Track');
 const qs = require('qs');
 
-// --- YARDIMCI: SPOTIFY TOKEN AL ---
+// --- TOKEN ALMA ---
 const getSpotifyToken = async () => {
-    const url = 'https://accounts.spotify.com/api/token';
+    const url = 'https://accounts.spotify.com/api/token'; // RESMİ TOKEN ADRESİ
     const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
     try {
         const res = await axios.post(url, qs.stringify({ grant_type: 'client_credentials' }), {
@@ -18,20 +18,16 @@ const getSpotifyToken = async () => {
     }
 };
 
-// Arama Fonksiyonu (Aynı kalıyor)
+// --- ARAMA ---
 const searchSpotify = async (req, res) => {
-    // ... (Burası öncekiyle aynı, değişiklik yok) ...
-    // Kodu kısaltmak için burayı yazmadım, sendeki hali kalsın.
     const query = req.query.q;
     if (!query) return res.status(400).json({ message: "Arama metni gerekli" });
 
     try {
         const token = await getSpotifyToken();
+        // RESMİ API ADRESİ
         const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=50`; 
-        
-        const response = await axios.get(url, {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const response = await axios.get(url, { headers: { 'Authorization': 'Bearer ' + token } });
 
         const tracks = response.data.tracks.items.map(track => ({
             id: track.id, 
@@ -40,87 +36,35 @@ const searchSpotify = async (req, res) => {
             image: track.album.images[0]?.url,
             previewUrl: track.preview_url
         }));
-
         res.json(tracks);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Arama hatası" });
     }
 };
 
-// Profil Getirme (Aynı kalıyor)
-const getUserProfile = async (req, res) => {
-    // ... (Burası öncekiyle aynı, değişiklik yok) ...
-    // Kodu kısaltmak için burayı yazmadım, sendeki hali kalsın.
-    try {
-        const user = await User.findById(req.params.id).select('-password');
-        if (!user) return res.status(404).json({ message: "Kullanıcı bulunamadı" });
-
-        const trackIds = user.favoriteTracks;
-
-        if (!trackIds || trackIds.length === 0) {
-            return res.json({ ...user._doc, favoriteTracks: [] });
-        }
-
-        const token = await getSpotifyToken();
-        const idsString = trackIds.join(','); 
-        const spotifyUrl = `https://api.spotify.com/v1/tracks?ids=${idsString}`;
-        
-        const spotifyRes = await axios.get(spotifyUrl, {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        const detailedTracks = spotifyRes.data.tracks.map(t => ({
-            _id: t.id, 
-            title: t.name,
-            artist: t.artists[0].name,
-            albumCover: t.album.images[0]?.url,
-            previewUrl: t.preview_url
-        }));
-
-        res.json({ ...user._doc, favoriteTracks: detailedTracks });
-
-    } catch (error) {
-        res.status(500).json({ message: "Profil yüklenirken hata oluştu" });
-    }
-};
-
-// Favori Silme (Aynı kalıyor)
-const removeFavoriteTrack = async (req, res) => {
-    // ... (Burası öncekiyle aynı) ...
-    const { userId, trackId } = req.body;
-    try {
-        const user = await User.findById(userId);
-        user.favoriteTracks = user.favoriteTracks.filter(id => id !== trackId);
-        await user.save();
-        res.json({ message: "Silindi." });
-    } catch (error) {
-        res.status(500).json({ message: "Hata" });
-    }
-};
-
-// 👇👇👇 ASIL DEĞİŞİKLİK BURADA 👇👇👇
-// @desc    Favorilere Ekle (Ve Audio Features Kaydet)
+// --- FAVORİ EKLEME (Features İle) ---
 const addFavoriteTrack = async (req, res) => {
     const { userId, track } = req.body; 
 
     try {
+        // 1. Token Al
         const token = await getSpotifyToken();
-
-        // 1. Spotify'dan Şarkının Özelliklerini (Audio Features) Çek
-        // Bu bize Valence (Mutluluk), Energy, Danceability verecek.
-        let features = {};
+        
+        // 2. Audio Features Çek (Valence, Energy vb.)
+        let audioFeatures = {};
         try {
-            const featureUrl = `googleusercontent.com/spotify.com/4{track.id}`; // Resmi Audio Features Adresi
+            // RESMİ AUDIO FEATURES ADRESİ
+            const featureUrl = `https://api.spotify.com/v1/audio-features/${track.id}`;
             const featureRes = await axios.get(featureUrl, {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
-            features = featureRes.data;
+            audioFeatures = featureRes.data;
         } catch (err) {
-            console.log("Audio Features çekilemedi (önemli değil, varsayılan atanır).");
+            console.log("Audio features çekilemedi, varsayılan atanacak.");
         }
 
-        // 2. Şarkıyı Tracks tablosuna KAYDET (Özellikleriyle birlikte)
-        await Track.findOneAndUpdate(
+        // 3. Veritabanına Kaydet (Features ile birlikte)
+        const dbTrack = await Track.findOneAndUpdate(
             { spotifyId: track.id }, 
             {
                 spotifyId: track.id,
@@ -129,30 +73,59 @@ const addFavoriteTrack = async (req, res) => {
                 albumCover: track.image,
                 previewUrl: track.previewUrl,
                 
-                // İşte Algoritma İçin Lazım Olan Kısım:
+                // 👇 İŞTE EKSİK OLAN KISIM BUYDU 👇
                 features: {
-                    valence: features.valence || 0.5,
-                    energy: features.energy || 0.5,
-                    danceability: features.danceability || 0.5,
-                    tempo: features.tempo || 100
+                    valence: audioFeatures.valence || 0.5,
+                    energy: audioFeatures.energy || 0.5,
+                    danceability: audioFeatures.danceability || 0.5,
+                    tempo: audioFeatures.tempo || 100
                 }
             },
             { upsert: true, new: true }
         );
 
-        // 3. Kullanıcının listesine ekle
+        // 4. Kullanıcıya Bağla
         const user = await User.findById(userId);
         
-        if (!user.favoriteTracks.includes(track.id)) {
-            user.favoriteTracks.push(track.id);
+        if (!user.favoriteTracks.includes(dbTrack._id)) {
+            user.favoriteTracks.push(dbTrack._id);
             await user.save();
-            res.json({ message: "Şarkı favorilere eklendi! 🎉" });
+            res.json({ message: "Eklendi! 🧬 (Analiz verileriyle)" });
         } else {
             res.status(400).json({ message: "Zaten ekli." });
         }
     } catch (error) {
-        console.error("Ekleme Hatası:", error);
-        res.status(500).json({ message: "Sunucu hatası" });
+        console.error(error);
+        res.status(500).json({ message: "Hata oluştu" });
+    }
+};
+
+// --- SİLME ---
+const removeFavoriteTrack = async (req, res) => {
+    const { userId, trackId } = req.body;
+    try {
+        const user = await User.findById(userId);
+        user.favoriteTracks = user.favoriteTracks.filter(id => id.toString() !== trackId);
+        await user.save();
+        res.json({ message: "Silindi." });
+    } catch (error) {
+        res.status(500).json({ message: "Hata" });
+    }
+};
+
+// --- PROFİL GETİRME ---
+const getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .select('-password')
+            .populate('favoriteTracks'); 
+
+        if (!user) return res.status(404).json({ message: "Kullanıcı yok" });
+
+        res.json(user);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Hata" });
     }
 };
 

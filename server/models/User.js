@@ -23,7 +23,8 @@ const UserSchema = new mongoose.Schema({
 
   // Favori Şarkılar (Basitleştirilmiş Özet)
   favoriteTracks: [{
-    type: String 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Track' 
   }],
 
   // Filmler için de aynısını yapalım, temiz olsun
