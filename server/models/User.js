@@ -15,23 +15,14 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  
-  // Spotify Bağlantı Bilgileri (Tokenlar)
-  spotifyId: { type: String },
-  spotifyAccessToken: { type: String },
-  spotifyRefreshToken: { type: String },
 
   // Favori Şarkılar (Basitleştirilmiş Özet)
   favoriteTracks: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Track' 
+    spotifyId: { type: String, required: true },
+    mood: { type: String, required: true } // Kullanıcının seçtiği mod
   }],
 
-  // Filmler için de aynısını yapalım, temiz olsun
-  favoriteMovies: [{
-    type: String
-  }],
-
-}, { timestamps: true }); // Kayıt tarihini otomatik tutar
+  createdAt: { type: Date, default: Date.now }
+});
 
 module.exports = mongoose.model('User', UserSchema);
