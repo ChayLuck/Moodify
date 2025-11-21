@@ -21,9 +21,15 @@ const Profile = () => {
     const fetchProfile = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/users/profile/${currentUser._id}`);
+        
+        // 👇 BU 2 SATIRI EKLE
+        console.log("Backend'den Gelen Profil:", res.data);
+        console.log("Favori Şarkılar Dizisi:", res.data.favoriteTracks);
+
         setUserProfile(res.data);
         setLoading(false);
       } catch (error) {
+        // ...
         console.error("Profil yüklenemedi", error);
         setLoading(false);
       }
@@ -67,8 +73,41 @@ const Profile = () => {
                 🎵 Favori Şarkılarım
               </h2>
               {userProfile?.favoriteTracks?.length > 0 ? (
-                 <ul>{/* İleride buraya liste gelecek */}</ul>
-              ) : (
+  <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+    {userProfile.favoriteTracks.map((track) => (
+      <div key={track._id} className="flex items-center gap-4 bg-gray-800 p-3 rounded-lg hover:bg-gray-600 transition group">
+        
+        {/* Resim */}
+        <div className="relative w-12 h-12 flex-shrink-0">
+            <img 
+                src={track.albumCover} 
+                alt={track.title} 
+                className="w-full h-full object-cover rounded-md" 
+            />
+        </div>
+
+        {/* Bilgiler */}
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-white truncate">{track.title}</p>
+          <p className="text-xs text-gray-400 truncate">{track.artist}</p>
+        </div>
+
+        {/* Dinle Butonu (Varsa) */}
+        {track.previewUrl && (
+            <a 
+                href={track.previewUrl} 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-xs bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded-full transition"
+            >
+                ▶
+            </a>
+        )}
+      </div>
+    ))}
+  </div>
+) : (
+
                 <div className="text-gray-500 text-sm text-center py-8 border-2 border-dashed border-gray-600 rounded-lg">
                   Henüz favori şarkı eklenmemiş.
                 </div>

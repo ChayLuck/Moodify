@@ -23,22 +23,13 @@ const UserSchema = new mongoose.Schema({
 
   // Favori Şarkılar (Basitleştirilmiş Özet)
   favoriteTracks: [{
-    spotifyId: String,
-    name: String,
-    artist: String,
-    image: String,
-    previewUrl: String,
-    addedAt: { type: Date, default: Date.now }
+    type: String 
   }],
 
-  // Favori Filmler
+  // Filmler için de aynısını yapalım, temiz olsun
   favoriteMovies: [{
-    tmdbId: String,
-    title: String,
-    poster: String,
-    overview: String,
-    addedAt: { type: Date, default: Date.now }
-  }]
+    type: String
+  }],
 
 }, { timestamps: true }); // Kayıt tarihini otomatik tutar
 
