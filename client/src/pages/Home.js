@@ -7,8 +7,10 @@ const Home = () => {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // --- YENİ EKLENEN STATE: ÇALAN MÜZİK ---
+  const [playingTrack, setPlayingTrack] = useState(null);
+  
   const navigate = useNavigate();
-  // Kullanıcı giriş yapmış mı?
   const user = JSON.parse(localStorage.getItem('user'));
 
   // Sayfa açılınca verileri çek
@@ -30,9 +32,8 @@ const Home = () => {
     fetchData();
   }, []);
 
-  // --- FAVORİYE EKLEME FONKSİYONU ---
+  // Favoriye Ekleme Fonksiyonu
   const addToFavorites = async (song) => {
-    // 1. Giriş Kontrolü
     if (!user) {
         if(window.confirm("Favorilere eklemek için giriş yapmalısınız. Giriş sayfasına gitmek ister misiniz?")) {
             navigate('/login');
@@ -41,8 +42,6 @@ const Home = () => {
     }
 
     try {
-        // 2. Backend'e Gönder
-        // Not: New Releases genelde 'Album' döner, previewUrl olmayabilir.
         await axios.post('http://localhost:5000/api/users/favorites/add', {
             userId: user._id,
             track: {
@@ -50,7 +49,7 @@ const Home = () => {
                 name: song.name,
                 artist: song.artist,
                 image: song.image,
-                previewUrl: null // Albümlerde genelde preview olmaz
+                previewUrl: null
             }
         });
         
@@ -62,7 +61,8 @@ const Home = () => {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white pb-20">
+    // pb-32 ekledik ki player alttaki içeriği kapatmasın
+    <div className="bg-gray-900 min-h-screen text-white pb-32">
       
       {/* --- HERO SECTION --- */}
       <div className="relative bg-gradient-to-r from-green-900 to-gray-900 py-24 px-6 text-center shadow-2xl">
@@ -121,35 +121,40 @@ const Home = () => {
         {loading ? <p className="text-center text-gray-500">Yükleniyor...</p> : (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {songs.map((song) => (
-              <div key={song.id} className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-blue-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative">
+              <div 
+                key={song.id} 
+                // Çalan şarkıysa yeşil çerçeve ekle
+                className={`bg-gray-800 rounded-xl overflow-hidden hover:shadow-blue-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative ${playingTrack === song.id ? 'ring-2 ring-green-500' : ''}`}
+              >
                 
-                {/* Resim Alanı */}
-                <div className="relative">
-                    <img src={song.image} alt={song.name} className="w-full h-64 object-cover transition duration-300 group-hover:opacity-80" />
+                {/* Resim Alanı ve Play Tuşu */}
+                <div className="relative cursor-pointer" onClick={() => setPlayingTrack(song.id)}>
+                    <img src={song.image} alt={song.name} className="w-full h-64 object-cover transition duration-300 group-hover:opacity-60" />
                     
-                    {/* 💖 FAVORİ BUTONU (Overlay) */}
+                    {/* ORTADA ÇIKAN PLAY İKONU */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
+                        <span className="bg-green-500 text-black rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg pl-1 hover:scale-110 transition">
+                            ▶
+                        </span>
+                    </div>
+
+                    {/* SAĞ ÜST: Favori Butonu */}
                     <button 
-                        onClick={() => addToFavorites(song)}
-                        className="absolute top-2 right-2 bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-lg transform hover:scale-110"
+                        onClick={(e) => {
+                            e.stopPropagation(); // Tıklayınca şarkı çalmasın, sadece favorilesin
+                            addToFavorites(song);
+                        }}
+                        className="absolute top-2 right-2 bg-gray-900/80 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-lg z-10"
                         title="Favorilere Ekle"
                     >
                         ❤️
                     </button>
-
-                    {/* Spotify Linki (Overlay) */}
-                    <a 
-                        href={song.url} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="absolute bottom-2 right-2 bg-green-500 text-black p-2 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-lg transform hover:scale-110"
-                        title="Spotify'da Aç"
-                    >
-                        🎧
-                    </a>
                 </div>
 
                 <div className="p-4">
-                  <h3 className="font-bold truncate text-lg text-white group-hover:text-blue-400 transition">{song.name}</h3>
+                  <h3 className={`font-bold truncate text-lg transition ${playingTrack === song.id ? 'text-green-400' : 'text-white group-hover:text-blue-400'}`}>
+                      {song.name}
+                  </h3>
                   <p className="text-gray-400 text-sm truncate">{song.artist}</p>
                 </div>
               </div>
@@ -157,6 +162,38 @@ const Home = () => {
           </div>
         )}
       </div>
+
+      {/* --- MÜZİK ÇALAR (SABİT ALT BAR) --- */}
+      {playingTrack && (
+        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-green-900 p-4 backdrop-blur-lg z-50 animate-slide-up shadow-2xl">
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+                
+                <div className="flex-1">
+                    {/* DİKKAT: New Releases 'Album' olduğu için embed/album kullandık */}
+                    <iframe 
+                        src={`https://open.spotify.com/embed/album/${playingTrack}?utm_source=generator&theme=0`} 
+                        width="100%" 
+                        height="80" 
+                        frameBorder="0" 
+                        allowFullScreen="" 
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                        loading="lazy"
+                        title="Spotify Player"
+                        className="rounded-lg shadow-lg bg-black"
+                    ></iframe>
+                </div>
+
+                {/* Kapat Butonu */}
+                <button 
+                    onClick={() => setPlayingTrack(null)}
+                    className="text-gray-400 hover:text-red-500 transition text-3xl px-4 font-light"
+                    title="Kapat"
+                >
+                    ×
+                </button>
+            </div>
+        </div>
+      )}
 
     </div>
   );
