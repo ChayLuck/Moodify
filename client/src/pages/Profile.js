@@ -2,15 +2,27 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+// --- MOD LİSTESİ (Renkleriyle) ---
+const MOODS = [
+  { name: 'Happy', emoji: '😊', color: 'bg-yellow-500 text-black' },
+  { name: 'Sad', emoji: '😢', color: 'bg-blue-600 text-white' },
+  { name: 'Energetic', emoji: '🔥', color: 'bg-red-500 text-white' },
+  { name: 'Chill', emoji: '🍃', color: 'bg-green-500 text-black' },
+  { name: 'Romantic', emoji: '❤️', color: 'bg-pink-500 text-white' }
+];
+
 const Profile = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // Modal State'leri
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [trackToEdit, setTrackToEdit] = useState(null);
+
   const navigate = useNavigate();
   
-  // Kullanıcıyı hafızadan al
+  // Kullanıcı ID'sini al
   const currentUser = JSON.parse(localStorage.getItem('user'));
-  // Sadece ID'yi al (Dependency array hatası vermesin diye)
   const currentUserId = currentUser ? currentUser._id : null;
 
   useEffect(() => {
@@ -19,12 +31,11 @@ const Profile = () => {
       return;
     }
 
+    // 👇 DÜZELTME: Fonksiyonu useEffect'in İÇİNE taşıdık
     const fetchProfile = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/users/profile/${currentUserId}`);
-        
-        console.log("Profil Verisi:", res.data); // Kontrol için
-
+        console.log("Profil Verisi:", res.data);
         setUserProfile(res.data);
         setLoading(false);
       } catch (error) {
@@ -35,35 +46,58 @@ const Profile = () => {
 
     fetchProfile();
 
-  }, [navigate, currentUserId]); 
+  }, [navigate, currentUserId]); // Artık fetchProfile bağımlılığı istemez
 
-  // --- FAVORİ SİLME FONKSİYONU ---
+  // --- FAVORİ SİLME ---
   const handleRemoveFavorite = async (trackId) => {
-    // 1. Onay İste
-    if (!window.confirm("Bu şarkıyı favorilerden kaldırmak istediğine emin misin?")) {
-      return;
-    }
+    if (!window.confirm("Bu şarkıyı kaldırmak istediğine emin misin?")) return;
 
     try {
-      // 2. Backend'e silme isteği at
       await axios.post('http://localhost:5000/api/users/favorites/remove', {
-        userId: currentUserId,
-        trackId: trackId
+        userId: currentUserId, trackId: trackId
       });
-
-      // 3. Sayfayı yenilemeden listeyi güncelle (Filtreleme)
+      
+      // Listeyi anlık güncelle
       setUserProfile(prev => ({
         ...prev,
         favoriteTracks: prev.favoriteTracks.filter(t => t._id !== trackId)
       }));
+    } catch (error) { alert("Silinemedi."); }
+  };
+
+  // --- MOD GÜNCELLEME ---
+  const handleUpdateMood = async (newMood) => {
+    if (!trackToEdit) return;
+
+    try {
+      await axios.put('http://localhost:5000/api/users/favorites/update-mood', {
+        userId: currentUserId,
+        trackId: trackToEdit._id,
+        mood: newMood
+      });
+
+      // Ekranda anlık güncelle
+      setUserProfile(prev => ({
+        ...prev,
+        favoriteTracks: prev.favoriteTracks.map(track => 
+          track._id === trackToEdit._id ? { ...track, userMood: newMood } : track
+        )
+      }));
+
+      setShowMoodModal(false);
+      setTrackToEdit(null);
 
     } catch (error) {
-      console.error("Silme hatası", error);
-      alert("Silinirken bir hata oluştu.");
+      alert("Mod güncellenemedi.");
     }
   };
 
-  if (loading) return <div className="text-white text-center mt-20 text-xl">Profil bilgileriniz yükleniyor...</div>;
+  const getMoodColor = (moodName) => {
+    const found = MOODS.find(m => m.name === moodName);
+    return found ? found.color : 'bg-gray-600 text-white';
+  };
+
+  if (loading) return <div className="text-white text-center mt-20">Yükleniyor...</div>;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10">
@@ -73,75 +107,62 @@ const Profile = () => {
         <div className="h-32 bg-gradient-to-r from-green-600 to-blue-900"></div>
         
         <div className="px-8 pb-8">
-          {/* --- PROFİL BİLGİLERİ (Avatar Seçimi Kaldırıldı) --- */}
+          {/* Profil Başlığı */}
           <div className="relative -top-12 flex flex-col items-center">
-            
-            {/* Profil Resmi (Sadece Gösterim) */}
             <div className="w-32 h-32 bg-gray-900 rounded-full border-4 border-gray-800 flex items-center justify-center text-5xl font-bold text-green-500 shadow-xl">
-              {/* Eğer kullanıcı resim yüklemişse göster, yoksa baş harfi */}
-              {userProfile?.profileImage ? (
-                 <img src={userProfile.profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                 userProfile?.username?.charAt(0).toUpperCase()
-              )}
+              {userProfile?.username?.charAt(0).toUpperCase()}
             </div>
-            
             <h1 className="text-3xl font-bold mt-4">{userProfile?.username}</h1>
             <p className="text-gray-400">{userProfile?.email}</p>
-            
-            <div className="mt-4 px-4 py-1 bg-gray-700 rounded-full text-xs text-gray-300">
-               Üyelik: {new Date(userProfile?.createdAt).toLocaleDateString()}
-            </div>
           </div>
 
           {/* --- KUTULAR --- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t border-gray-700 pt-6">
+          <div className="grid grid-cols-1 gap-6 mt-6 border-t border-gray-700 pt-6">
             
-            {/* --- FAVORİLER KUTUSU --- */}
-            <div className="bg-gray-700/30 p-6 rounded-lg border border-gray-700">
+            {/* Favoriler Listesi */}
+            <div>
               <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                 🎵 Favori Şarkılarım
               </h2>
               
               {userProfile?.favoriteTracks?.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                   {userProfile.favoriteTracks.map((track) => (
-                    <div key={track._id} className="flex items-center gap-4 bg-gray-800 p-3 rounded-lg hover:bg-gray-700 transition group relative">
+                    <div key={track._id} className="flex items-center gap-4 bg-gray-700/30 p-3 rounded-lg hover:bg-gray-700 transition group">
                       
                       {/* Resim */}
-                      <div className="relative w-12 h-12 flex-shrink-0">
-                          <img 
-                              src={track.albumCover || "https://via.placeholder.com/150"} 
-                              alt={track.title} 
-                              className="w-full h-full object-cover rounded-md" 
-                          />
-                      </div>
+                      <img 
+                          src={track.albumCover || "https://via.placeholder.com/150"} 
+                          alt={track.title} 
+                          className="w-12 h-12 object-cover rounded-md flex-shrink-0" 
+                      />
 
                       {/* Bilgiler */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-white truncate">{track.title || "İsimsiz"}</p>
-                        <p className="text-xs text-gray-400 truncate">{track.artist || "Bilinmiyor"}</p>
+                        <p className="font-bold text-sm text-white truncate">{track.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{track.artist}</p>
                       </div>
 
-                      {/* Butonlar */}
-                      <div className="flex items-center gap-2">
-                          {/* Dinle */}
-                          {track.previewUrl && (
-                              <a 
-                                  href={track.previewUrl} 
-                                  target="_blank" 
-                                  rel="noreferrer"
-                                  className="text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded transition"
-                              >
-                                  ▶
-                              </a>
-                          )}
+                      {/* --- MOD ROZETİ --- */}
+                      <button 
+                        onClick={() => {
+                            setTrackToEdit(track);
+                            setShowMoodModal(true);
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm transform hover:scale-105 transition ${getMoodColor(track.userMood)}`}
+                        title="Modu Değiştir"
+                      >
+                        {track.userMood || "Belirsiz"}
+                      </button>
 
-                          {/* ❌ SİLME BUTONU */}
+                      {/* Aksiyonlar */}
+                      <div className="flex items-center gap-2 pl-2 border-l border-gray-600">
+                          {track.previewUrl && (
+                              <a href={track.previewUrl} target="_blank" rel="noreferrer" className="text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded">▶</a>
+                          )}
                           <button 
                             onClick={() => handleRemoveFavorite(track._id)}
-                            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:bg-red-600 hover:text-white transition"
-                            title="Favorilerden Kaldır"
+                            className="text-gray-500 hover:text-red-500 transition text-lg px-1"
                           >
                             ✕
                           </button>
@@ -150,25 +171,42 @@ const Profile = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-gray-500 text-sm text-center py-8 border-2 border-dashed border-gray-600 rounded-lg">
+                <div className="text-gray-500 text-center py-8 border-2 border-dashed border-gray-600 rounded-lg">
                   Henüz favori şarkı eklenmemiş.
                 </div>
               )}
             </div>
 
-            {/* --- GEÇMİŞ KUTUSU --- */}
-            <div className="bg-gray-700/30 p-6 rounded-lg border border-gray-700">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                 🕰️ Geçmiş Tavsiyeler
-              </h2>
-              <div className="text-gray-500 text-sm text-center py-8 border-2 border-dashed border-gray-600 rounded-lg">
-                Henüz bir mod seçip tavsiye almadın.
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
+
+      {/* --- MOD DÜZENLEME MODALI --- */}
+      {showMoodModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
+            <div className="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-gray-600 shadow-2xl text-center">
+                <h3 className="text-xl font-bold mb-2 text-white">Hissi Değiştir</h3>
+                <p className="text-gray-400 mb-6 text-sm italic">"{trackToEdit?.title}"</p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                    {MOODS.map(m => (
+                        <button 
+                            key={m.name}
+                            onClick={() => handleUpdateMood(m.name)}
+                            className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2`}
+                        >
+                            <span>{m.emoji}</span> {m.name}
+                        </button>
+                    ))}
+                </div>
+                
+                <button onClick={() => setShowMoodModal(false)} className="mt-6 text-gray-400 hover:text-white underline text-sm">
+                    Vazgeç
+                </button>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 };

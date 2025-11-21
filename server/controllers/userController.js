@@ -140,4 +140,24 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack };
+const updateFavoriteMood = async (req, res) => {
+    const { userId, trackId, mood } = req.body;
+
+    try {
+        // MongoDB'nin Array içindeki elemanı güncelleme ($set) özelliği
+        await User.updateOne(
+            { _id: userId, "favoriteTracks.spotifyId": trackId },
+            { 
+                $set: { "favoriteTracks.$.mood": mood } 
+            }
+        );
+
+        res.json({ message: "Mod güncellendi! 🎭" });
+    } catch (error) {
+        console.error("Mod Güncelleme Hatası:", error);
+        res.status(500).json({ message: "Güncellenemedi" });
+    }
+};
+
+// 👇 EXPORT KISMINA EKLEMEYİ UNUTMA
+module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack, updateFavoriteMood };
