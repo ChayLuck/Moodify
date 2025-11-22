@@ -8,13 +8,15 @@ const Songs = () => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   
-  // --- STATE YÖNETİMİ ---
-  const [playingTrack, setPlayingTrack] = useState(null); // Alttaki Player
-  const [selectedTrack, setSelectedTrack] = useState(null); // Detay Modalı
+  // --- SORT STATE ---
+  const [sortType, setSortType] = useState('relevance');
+
+  // --- PLAYER & MODAL STATE ---
+  const [playingTrack, setPlayingTrack] = useState(null);
+  const [selectedTrack, setSelectedTrack] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
-  
-  const [showMoodModal, setShowMoodModal] = useState(false); // Mood Modalı
-  const [trackToFavorite, setTrackToFavorite] = useState(null); // Favorilenecek Şarkı
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [trackToFavorite, setTrackToFavorite] = useState(null);
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -27,14 +29,14 @@ const Songs = () => {
     { name: 'Romantic', emoji: '❤️', color: 'bg-pink-500' }
   ];
 
-  // --- ARAMA ---
+  // --- SEARCH ---
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query) return;
     setLoading(true);
     setTracks([]);
     setSearched(false);
-    setPlayingTrack(null);
+    setSortType('relevance'); 
 
     try {
       const res = await axios.get(`http://localhost:5000/api/songs/search?q=${query}`);
@@ -47,12 +49,34 @@ const Songs = () => {
     }
   };
 
-  // --- DETAYLARI GETİR VE MODALI AÇ ---
+  // --- SORT FUNCTION (YENİ) ---
+  const handleSortChange = (e) => {
+    const type = e.target.value;
+    setSortType(type);
+
+    let sortedTracks = [...tracks];
+
+    switch (type) {
+        case 'popularity_desc': // En Popüler
+            sortedTracks.sort((a, b) => b.popularity - a.popularity);
+            break;
+        case 'date_newest': // En Yeni
+            sortedTracks.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
+            break;
+        case 'date_oldest': // En Eski
+            sortedTracks.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+            break;
+        default:
+            break;
+    }
+    setTracks(sortedTracks);
+  };
+
+  // --- DETAY MODALI ---
   const fetchDetailsAndOpen = async (trackId) => {
     setModalLoading(true);
-    // Önce boş bir obje ile modalı aç (Yükleniyor göstermek için)
     setSelectedTrack({ id: trackId }); 
-    document.body.style.overflow = 'hidden'; // Scrollu kilitle
+    document.body.style.overflow = 'hidden'; 
 
     try {
       const res = await axios.get(`http://localhost:5000/api/songs/details/${trackId}`);
@@ -69,14 +93,14 @@ const Songs = () => {
     document.body.style.overflow = 'auto';
   };
 
-  // --- FAVORİ SÜRECİ (Önce Mood Sor) ---
+  // --- FAVORİ EKLEME (Mood İle) ---
   const initiateFavorite = (track) => {
     if (!user) {
         if(window.confirm("Login required. Go to login page?")) navigate('/login');
         return;
     }
     setTrackToFavorite(track);
-    setShowMoodModal(true); // Mood modalını aç
+    setShowMoodModal(true);
   };
 
   const saveFavoriteWithMood = async (mood) => {
@@ -95,8 +119,7 @@ const Songs = () => {
         });
         
         alert(`Added to favorites as ${mood}! ❤️`);
-        setShowMoodModal(false); // Mood modalını kapat
-        // Detay modalını kapatmak isteyip istemediğin sana kalmış (Şimdilik açık kalsın)
+        setShowMoodModal(false);
 
     } catch (error) {
         alert(error.response?.data?.message || "Error.");
@@ -112,7 +135,6 @@ const Songs = () => {
             🎵 <span className="text-white">Discover Music</span>
         </h1>
 
-        {/* ARAMA */}
         <form onSubmit={handleSearch} className="flex gap-4 mb-8 max-w-3xl mx-auto">
           <input
             type="text"
@@ -126,13 +148,33 @@ const Songs = () => {
           </button>
         </form>
 
+        {/* --- SONUÇ BİLGİSİ VE SIRALAMA --- */}
         {searched && (
-          <p className="text-gray-400 mb-6 text-center">
-            Found <span className="text-green-400 font-bold">{tracks.length}</span> songs.
-          </p>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
+            
+            <p className="text-gray-400 mb-2 md:mb-0">
+              Found <span className="text-green-400 font-bold">{tracks.length}</span> songs.
+            </p>
+
+            {/* SORT DROPDOWN */}
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">Sort By:</span>
+                <select 
+                    value={sortType}
+                    onChange={handleSortChange}
+                    className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 cursor-pointer"
+                >
+                    <option value="relevance">Recommended</option>
+                    <option value="popularity_desc">Popularity (High to Low)</option>
+                    <option value="date_newest">Release Date (Newest)</option>
+                    <option value="date_oldest">Release Date (Oldest)</option>
+                </select>
+            </div>
+
+          </div>
         )}
 
-        {/* --- ŞARKI LİSTESİ (Sadeleştirilmiş Kartlar) --- */}
+        {/* --- LİSTE --- */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {tracks.map((track) => (
                 <div 
@@ -142,10 +184,14 @@ const Songs = () => {
                 >
                     <div className="relative aspect-square overflow-hidden">
                         <img src={track.image} alt={track.name} className="w-full h-full object-cover transition duration-500 group-hover:scale-110" />
-                        {/* Hover İkonu */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                             <span className="text-white text-4xl">🔍</span>
                         </div>
+                        
+                        {/* Popülerlik Rozeti (Opsiyonel Süs) */}
+                        {track.popularity > 80 && (
+                            <div className="absolute top-2 right-2 bg-green-500 text-black text-xs font-bold px-2 py-1 rounded">HOT</div>
+                        )}
                     </div>
                     <div className="p-3">
                         <h3 className="font-bold text-white truncate group-hover:text-green-400">{track.name}</h3>
@@ -160,19 +206,15 @@ const Songs = () => {
       {selectedTrack && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-40 p-4 animate-fade-in" onClick={closeModal}>
             <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
-                
-                <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">&times;</button>
+                <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
 
                 {modalLoading ? (
                     <div className="p-20 w-full text-center text-green-500 text-xl">Loading Track Details...</div>
                 ) : (
                     <>
-                        {/* SOL: Albüm Kapağı */}
                         <div className="w-full md:w-1/2 h-80 md:h-auto relative">
                             <img src={selectedTrack.image} alt={selectedTrack.name} className="w-full h-full object-cover" />
                         </div>
-
-                        {/* SAĞ: Bilgiler */}
                         <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
                             <h2 className="text-3xl font-bold text-white mb-2">{selectedTrack.name}</h2>
                             <p className="text-xl text-green-400 mb-6">{selectedTrack.artist}</p>
@@ -184,9 +226,6 @@ const Songs = () => {
                                 <div className="flex justify-between border-b border-gray-800 pb-2">
                                     <span>Release Date</span> <span className="text-white">{selectedTrack.releaseDate}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-gray-800 pb-2">
-                                    <span>Duration</span> <span className="text-white">{selectedTrack.duration} min</span>
-                                </div>
                                 <div className="flex justify-between items-center">
                                     <span>Popularity</span> 
                                     <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -197,10 +236,7 @@ const Songs = () => {
 
                             <div className="flex gap-4 mt-auto">
                                 <button 
-                                    onClick={() => {
-                                        setPlayingTrack(selectedTrack.id); // Player'ı başlat
-                                        // Modalı kapatmaya gerek yok, altta çalar
-                                    }}
+                                    onClick={() => setPlayingTrack(selectedTrack.id)}
                                     className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold transition shadow-lg"
                                 >
                                     ▶ Play Now
@@ -219,13 +255,12 @@ const Songs = () => {
         </div>
       )}
 
-      {/* --- MOOD SEÇİM MODALI (Detay Modalının Üstünde Çıkar) --- */}
+      {/* --- MOOD MODAL --- */}
       {showMoodModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-md animate-fade-in">
             <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
                 <h3 className="text-2xl font-bold mb-2 text-white">How does it feel?</h3>
                 <p className="text-gray-400 mb-6 text-sm italic">"{trackToFavorite?.name}"</p>
-                
                 <div className="grid grid-cols-2 gap-3">
                     {MOODS.map(m => (
                         <button key={m.name} onClick={() => saveFavoriteWithMood(m.name)} className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}>
@@ -238,7 +273,7 @@ const Songs = () => {
         </div>
       )}
 
-      {/* --- PLAYER (SABİT ALT BAR) --- */}
+      {/* --- PLAYER --- */}
       {playingTrack && (
         <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-green-900 p-4 backdrop-blur-lg z-[60] animate-slide-up shadow-2xl">
             <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
