@@ -145,19 +145,27 @@ const getUserProfile = async (req, res) => {
         const ids = user.favoriteTracks.map(t => t.spotifyId);
         const idsString = ids.slice(0, 50).join(','); 
 
+        // RESMİ TRACKS ADRESİ
         const spotifyUrl = `https://api.spotify.com/v1/tracks?ids=${idsString}`;
-        const spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+        
+        const spotifyRes = await axios.get(spotifyUrl, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
 
         const detailedTracks = spotifyRes.data.tracks
             .filter(t => t !== null)
             .map(t => {
                 const localData = user.favoriteTracks.find(local => local.spotifyId === t.id);
                 return {
-                    _id: t.id, 
+                    _id: t.id, // Spotify ID
                     title: t.name,
                     artist: t.artists[0].name,
+                    album: t.album.name, // <-- YENİ: Albüm Adı
                     albumCover: t.album.images[0]?.url,
                     previewUrl: t.preview_url,
+                    releaseDate: t.album.release_date, // <-- YENİ: Tarih (Sıralama için)
+                    popularity: t.popularity, // <-- YENİ: Popülerlik (Sıralama için)
+                    duration: (t.duration_ms / 60000).toFixed(2), // <-- YENİ: Süre
                     userMood: localData ? localData.mood : '?'
                 };
             });
