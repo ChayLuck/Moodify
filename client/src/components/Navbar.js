@@ -39,6 +39,10 @@ const Navbar = () => {
                 Şarkılar
               </Link>
 
+              <Link to="/movies" className="hover:text-yellow-400 transition">
+                Filmler
+              </Link>
+
               <div className="flex items-center gap-4 border-l border-gray-700 pl-4">
                 <span className="text-gray-400 text-sm hidden md:block">
                   {user.username}

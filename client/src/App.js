@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Songs from './pages/Songs';
+import Movies from './pages/Movies';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/songs" element={<Songs />} />
+          <Route path="/movies" element={<Movies />} />
         </Routes>
       </div>
     </Router>
