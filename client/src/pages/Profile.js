@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// --- MOD LİSTESİ ---
 const MOODS = [
   { name: 'Happy', emoji: '😊', color: 'bg-yellow-500 text-black' },
   { name: 'Sad', emoji: '😢', color: 'bg-blue-600 text-white' },
@@ -16,11 +15,11 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   
   // --- UI STATES ---
-  const [sortType, setSortType] = useState('date_added');
+  const [sortType, setSortType] = useState('date_added_newest');
   const [playingTrack, setPlayingTrack] = useState(null);
-  const [selectedTrack, setSelectedTrack] = useState(null); // Detay Modalı
-  const [showMoodModal, setShowMoodModal] = useState(false); // Mood Düzenleme
-  const [trackToEdit, setTrackToEdit] = useState(null); // Modu değişecek şarkı
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [trackToEdit, setTrackToEdit] = useState(null);
 
   const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('user'));
@@ -32,7 +31,6 @@ const Profile = () => {
       return;
     }
 
-    // 👇 DÜZELTME: Fonksiyonu buraya taşıdık. Artık dependency sorunu yok.
     const fetchProfile = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/users/profile/${currentUserId}`);
@@ -47,7 +45,7 @@ const Profile = () => {
     fetchProfile();
   }, [navigate, currentUserId]); 
 
-  // --- SIRALAMA FONKSİYONU ---
+  // --- SIRALAMA FONKSİYONU (DÜZELTİLDİ) ---
   const handleSortChange = (e) => {
     const type = e.target.value;
     setSortType(type);
@@ -57,10 +55,16 @@ const Profile = () => {
     let sortedTracks = [...userProfile.favoriteTracks];
 
     switch (type) {
+        case 'date_added_newest': // En Yeni Eklenen (Mongo ID'ye göre)
+            sortedTracks.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
+            break;
+        case 'date_added_oldest': // En Eski Eklenen
+            sortedTracks.sort((a, b) => a.sortingId.toString().localeCompare(b.sortingId.toString()));
+            break;
         case 'popularity_desc': 
             sortedTracks.sort((a, b) => b.popularity - a.popularity);
             break;
-        case 'date_newest': 
+        case 'date_newest': // Çıkış Tarihi
             sortedTracks.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
             break;
         case 'date_oldest': 
@@ -167,7 +171,8 @@ const Profile = () => {
                     onChange={handleSortChange}
                     className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 cursor-pointer"
                 >
-                    <option value="date_added">Date Added</option>
+                    <option value="date_added_newest">Date Added (Newest)</option>
+                    <option value="date_added_oldest">Date Added (Oldest)</option>
                     <option value="popularity_desc">Popularity</option>
                     <option value="date_newest">Release Date (Newest)</option>
                     <option value="date_oldest">Release Date (Oldest)</option>
@@ -187,12 +192,10 @@ const Profile = () => {
                         <div className="relative aspect-square">
                             <img src={track.albumCover || "https://via.placeholder.com/150"} alt={track.title} className="w-full h-full object-cover" />
                             
-                            {/* Mood Rozeti */}
                             <div className={`absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-bold shadow-md ${getMoodColor(track.userMood)}`}>
                                 {track.userMood}
                             </div>
 
-                            {/* Hover İkonu */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                                 <span className="text-white text-4xl">🔍</span>
                             </div>
@@ -232,14 +235,23 @@ const Profile = () => {
                     <p className="text-xl text-green-400 mb-6">{selectedTrack.artist}</p>
 
                     <div className="space-y-3 text-gray-300 text-sm mb-8">
-                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedTrack.album}</span></div>
-                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Released</span> <span className="text-white">{selectedTrack.releaseDate}</span></div>
-                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Duration</span> <span className="text-white">{selectedTrack.duration} min</span></div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedTrack.album || "N/A"}</span></div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Released</span> <span className="text-white">{selectedTrack.releaseDate || "N/A"}</span></div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Duration</span> <span className="text-white">{selectedTrack.duration || "?"} min</span></div>
+                        
+                        {/* 👇 POPÜLERLİK BARINI GERİ EKLEDİK 👇 */}
                         <div className="flex justify-between items-center">
+                            <span>Popularity</span> 
+                            <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500" style={{ width: `${selectedTrack.popularity || 50}%` }}></div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4">
                             <span>Mood</span> 
                             <button 
                                 onClick={() => { setTrackToEdit(selectedTrack); setShowMoodModal(true); }}
-                                className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-110 transition ${getMoodColor(selectedTrack.userMood)}`}
+                                className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${getMoodColor(selectedTrack.userMood)}`}
                             >
                                 {selectedTrack.userMood} (Change)
                             </button>

@@ -142,6 +142,8 @@ const getUserProfile = async (req, res) => {
         }
 
         const token = await getSpotifyToken();
+        
+        // ID'leri al
         const ids = user.favoriteTracks.map(t => t.spotifyId);
         const idsString = ids.slice(0, 50).join(','); 
 
@@ -152,23 +154,31 @@ const getUserProfile = async (req, res) => {
             headers: { 'Authorization': 'Bearer ' + token }
         });
 
+        // Veriyi Zenginleştir
         const detailedTracks = spotifyRes.data.tracks
             .filter(t => t !== null)
             .map(t => {
+                // Bu şarkının veritabanındaki kaydını bul (Mood ve ID için)
                 const localData = user.favoriteTracks.find(local => local.spotifyId === t.id);
+                
                 return {
                     _id: t.id, // Spotify ID
+                    sortingId: localData ? localData._id : '', // 👇 SIRALAMA İÇİN GEREKLİ (Mongo ID)
                     title: t.name,
                     artist: t.artists[0].name,
-                    album: t.album.name, // <-- YENİ: Albüm Adı
+                    album: t.album.name, // Detay için
                     albumCover: t.album.images[0]?.url,
                     previewUrl: t.preview_url,
-                    releaseDate: t.album.release_date, // <-- YENİ: Tarih (Sıralama için)
-                    popularity: t.popularity, // <-- YENİ: Popülerlik (Sıralama için)
-                    duration: (t.duration_ms / 60000).toFixed(2), // <-- YENİ: Süre
+                    releaseDate: t.album.release_date, // Detay için
+                    popularity: t.popularity, // 👇 POPÜLERLİK ÇUBUĞU İÇİN
+                    duration: (t.duration_ms / 60000).toFixed(2), // Detay için
                     userMood: localData ? localData.mood : '?'
                 };
             });
+
+        // Varsayılan olarak eklenme sırasına göre (En Yeni En Üstte) gönderelim
+        // Mongo ID'leri zamana göre sıralanabilir.
+        detailedTracks.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
 
         res.json({ ...user._doc, favoriteTracks: detailedTracks });
 
