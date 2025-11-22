@@ -1,19 +1,18 @@
-// server/controllers/songController.js
 const axios = require('axios');
 const qs = require('qs');
 
-// Yardımcı Fonksiyon: Token Al
+// --- YARDIMCI: TOKEN ALMA ---
 const getSpotifyToken = async () => {
-    // Spotify Resmi Token Adresi
-    const url = 'https://accounts.spotify.com/api/token';
-
+    // Token almak için kullanılan standart adres
+    const url = 'https://accounts.spotify.com/api/token'; 
+    
     const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
     
     try {
         const res = await axios.post(url, qs.stringify({ grant_type: 'client_credentials' }), {
-            headers: {
-                'Authorization': 'Basic ' + auth,
-                'Content-Type': 'application/x-www-form-urlencoded'
+            headers: { 
+                'Authorization': 'Basic ' + auth, 
+                'Content-Type': 'application/x-www-form-urlencoded' 
             }
         });
         return res.data.access_token;
@@ -23,40 +22,65 @@ const getSpotifyToken = async () => {
     }
 };
 
-// @desc    Spotify'da Şarkı Ara
-// @route   GET /api/songs/search?q=...
+// --- 1. ŞARKI ARAMA ---
 const searchSongs = async (req, res) => {
-    const query = req.query.q; // URL'den aranan kelimeyi al (?q=tarkan)
-    
-    if (!query) {
-        return res.status(400).json({ message: "Lütfen bir şarkı adı yazın." });
+    const query = req.query.q;
+    if (!query) return res.status(400).json({ message: "Arama metni gerekli" });
+
+    try {
+        const token = await getSpotifyToken();
+        // Arama adresi
+        const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=50`; 
+        
+        const response = await axios.get(url, { headers: { 'Authorization': 'Bearer ' + token } });
+
+        const tracks = response.data.tracks.items.map(track => ({
+            id: track.id, 
+            name: track.name,
+            artist: track.artists[0].name,
+            image: track.album.images[0]?.url,
+            previewUrl: track.preview_url
+        }));
+        res.json(tracks);
+    } catch (error) {
+        console.error("Arama Hatası:", error.message);
+        res.status(500).json({ message: "Arama hatası" });
     }
+};
+
+// --- 2. ŞARKI DETAY (DÜZELTİLEN KISIM) ---
+const getTrackDetails = async (req, res) => {
+    const trackId = req.params.id;
 
     try {
         const token = await getSpotifyToken();
         
-        // Spotify Resmi Arama Adresi
-        const url = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=50`;
+        // 👇 DOĞRU ADRES BUDUR: https://api.spotify.com/v1/tracks/...
+        const url = `https://api.spotify.com/v1/tracks/${trackId}`; 
         
-        const response = await axios.get(url, {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const response = await axios.get(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = response.data;
 
-        // Frontend'e sadece lazım olan temiz veriyi yollayalım
-        const tracks = response.data.tracks.items.map(track => ({
-            id: track.id,
-            name: track.name,
-            artist: track.artists[0].name,
-            image: track.album.images[0]?.url, // En büyük resim
-            previewUrl: track.preview_url
-        }));
+        const trackDetails = {
+            id: data.id,
+            name: data.name,
+            artist: data.artists.map(a => a.name).join(', '), // Tüm sanatçılar
+            artistId: data.artists[0].id, 
+            album: data.album.name,
+            releaseDate: data.album.release_date,
+            image: data.album.images[0]?.url, // En büyük resim
+            popularity: data.popularity, // 0-100 arası
+            duration: (data.duration_ms / 60000).toFixed(2), // Dakika
+            previewUrl: data.preview_url,
+            spotifyUrl: data.external_urls.spotify
+        };
 
-        res.json(tracks);
+        res.json(trackDetails);
 
     } catch (error) {
-        console.error("Arama Hatası:", error.message);
-        res.status(500).json({ message: "Spotify arama hatası" });
+        console.error("Detay Hatası:", error.response ? error.response.data : error.message);
+        res.status(500).json({ message: "Şarkı detayı alınamadı." });
     }
 };
 
-module.exports = { searchSongs };
+module.exports = { searchSongs, getTrackDetails };

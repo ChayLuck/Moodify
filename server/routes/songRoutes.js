@@ -1,9 +1,8 @@
-// server/routes/songRoutes.js
 const express = require('express');
 const router = express.Router();
-const { searchSongs } = require('../controllers/songController');
+const { searchSongs, getTrackDetails } = require('../controllers/songController');
 
-// Arama rotası: /api/songs/search
 router.get('/search', searchSongs);
+router.get('/details/:id', getTrackDetails); // <-- YENİ
 
 module.exports = router;
