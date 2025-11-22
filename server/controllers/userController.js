@@ -13,7 +13,7 @@ const getSpotifyToken = async () => {
         });
         return res.data.access_token;
     } catch (error) {
-        console.error("Token Hatası:", error.message);
+        console.error("Token Error:", error.message);
         return null;
     }
 };
@@ -21,7 +21,7 @@ const getSpotifyToken = async () => {
 // --- 2. ARAMA ---
 const searchSpotify = async (req, res) => {
     const query = req.query.q;
-    if (!query) return res.status(400).json({ message: "Gerekli alan eksik" });
+    if (!query) return res.status(400).json({ message: "Required Field Missing" });
 
     try {
         const token = await getSpotifyToken();
@@ -38,7 +38,7 @@ const searchSpotify = async (req, res) => {
         }));
         res.json(tracks);
     } catch (error) {
-        res.status(500).json({ message: "Arama hatası" });
+        res.status(500).json({ message: "Searching Error" });
     }
 };
 
@@ -57,7 +57,7 @@ const addFavoriteTrack = async (req, res) => {
 
             if (albumRes.data && albumRes.data.items && albumRes.data.items.length > 0) {
                 const firstTrack = albumRes.data.items[0];
-                console.log(`💿 Albüm -> Şarkı Dönüşümü: "${track.name}" -> "${firstTrack.name}"`);
+                console.log(`💿 Album -> Song Conversion: "${track.name}" -> "${firstTrack.name}"`);
                 
                 track = {
                     id: firstTrack.id,
@@ -93,14 +93,14 @@ const addFavoriteTrack = async (req, res) => {
         if (!exists) {
             user.favoriteTracks.push({ spotifyId: track.id, mood: mood });
             await user.save();
-            res.json({ message: `"${track.name}" eklendi! 💾` });
+            res.json({ message: `"${track.name}" added! 💾` });
         } else {
-            res.status(400).json({ message: "Zaten ekli." });
+            res.status(400).json({ message: "Already Added." });
         }
 
     } catch (error) {
-        console.error("Ekleme Hatası:", error.message);
-        res.status(500).json({ message: "Hata oluştu" });
+        console.error("Adding Error:", error.message);
+        res.status(500).json({ message: "Error" });
     }
 };
 
@@ -111,7 +111,7 @@ const removeFavoriteTrack = async (req, res) => {
         const user = await User.findById(userId);
         user.favoriteTracks = user.favoriteTracks.filter(t => t.spotifyId !== trackId);
         await user.save();
-        res.json({ message: "Silindi." });
+        res.json({ message: "Deleted." });
     } catch (error) {
         res.status(500).json({ message: "Hata" });
     }
@@ -125,9 +125,9 @@ const updateFavoriteMood = async (req, res) => {
             { _id: userId, "favoriteTracks.spotifyId": trackId },
             { $set: { "favoriteTracks.$.mood": mood } }
         );
-        res.json({ message: "Güncellendi" });
+        res.json({ message: "Updated" });
     } catch (error) {
-        res.status(500).json({ message: "Hata" });
+        res.status(500).json({ message: "Error" });
     }
 };
 
@@ -135,7 +135,7 @@ const updateFavoriteMood = async (req, res) => {
 const getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
-        if (!user) return res.status(404).json({ message: "Kullanıcı yok" });
+        if (!user) return res.status(404).json({ message: "No User" });
 
         if (user.favoriteTracks.length === 0) {
             return res.json({ ...user._doc, favoriteTracks: [] });
@@ -183,8 +183,8 @@ const getUserProfile = async (req, res) => {
         res.json({ ...user._doc, favoriteTracks: detailedTracks });
 
     } catch (error) {
-        console.error("Profil Hatası:", error.message);
-        res.status(500).json({ message: "Hata" });
+        console.error("Profile Error:", error.message);
+        res.status(500).json({ message: "Error" });
     }
 };
 

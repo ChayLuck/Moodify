@@ -16,7 +16,7 @@ const getSpotifyToken = async () => {
 // --- 1. ŞARKI ARAMA ---
 const searchSongs = async (req, res) => {
     const query = req.query.q;
-    if (!query) return res.status(400).json({ message: "Arama metni gerekli" });
+    if (!query) return res.status(400).json({ message: "Search Text Required" });
 
     try {
         const token = await getSpotifyToken();
@@ -34,7 +34,7 @@ const searchSongs = async (req, res) => {
         }));
         res.json(tracks);
     } catch (error) {
-        res.status(500).json({ message: "Arama hatası" });
+        res.status(500).json({ message: "Searching Error" });
     }
 };
 
@@ -99,8 +99,8 @@ const getTrackDetails = async (req, res) => {
         res.json(albumDetails);
 
     } catch (error) {
-        console.error("Detay Hatası:", error.message);
-        res.status(500).json({ message: "Detaylar alınamadı." });
+        console.error("Details Error:", error.message);
+        res.status(500).json({ message: "Details Couldn't Be Obtained." });
     }
 };
 

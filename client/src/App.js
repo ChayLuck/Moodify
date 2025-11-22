@@ -7,9 +7,11 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Songs from './pages/Songs';
 import Movies from './pages/Movies';
+import { ToastProvider } from "./context/ToastContext";
 
 function App() {
   return (
+   <ToastProvider>
     <Router>
       {/* Arka planı koyu gri yapıyoruz (Dark Mode hissi) */}
       <div className="min-h-screen bg-gray-800">
@@ -25,6 +27,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+   </ToastProvider> 
   );
 }
 

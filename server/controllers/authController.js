@@ -21,6 +21,13 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please add all fields' });
         }
 
+        // 🔒 Password minimum length validation
+        if (password.length < 6) {
+            return res.status(400).json({
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
         // Kullanıcı zaten var mı?
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -52,6 +59,7 @@ const registerUser = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // @desc    Authenticate a user (Login)
 // @route   POST /api/auth/login

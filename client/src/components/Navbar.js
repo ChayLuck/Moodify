@@ -32,27 +32,29 @@ const Navbar = () => {
               </Link>
               
               <Link to="/profile" className="hover:text-green-400 transition font-medium">
-                Profilim
+                My Profile
               </Link>
 
               <Link to="/songs" className="hover:text-green-400 transition">
-                Şarkılar
+                Songs
               </Link>
 
               <Link to="/movies" className="hover:text-yellow-400 transition">
-                Filmler
+                Movies
               </Link>
 
               <div className="flex items-center gap-4 border-l border-gray-700 pl-4">
                 <span className="text-gray-400 text-sm hidden md:block">
-                  {user.username}
+                  <Link to="/profile">
+                    {user.username}
+                  </Link>
                 </span>
                 
                 <button 
                   onClick={handleLogout} 
                   className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm font-bold transition"
                 >
-                  Çıkış
+                  Logout
                 </button>
               </div>
             </>
@@ -60,11 +62,11 @@ const Navbar = () => {
             // --- GİRİŞ YAPMAMIŞ KULLANICI İÇİN ---
             <>
               <Link to="/login" className="hover:text-green-400 transition">
-                Giriş Yap
+                Login
               </Link>
               
               <Link to="/signup" className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-green-500/20">
-                Kayıt Ol
+                Sign Up
               </Link>
               
             </>
