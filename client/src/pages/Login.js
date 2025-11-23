@@ -50,7 +50,7 @@ const Login = () => {
     <div className="flex justify-center items-center h-screen bg-gray-900 relative">
       {/* LOGIN CARD */}
       <div className="bg-gray-800 p-10 rounded-lg shadow-xl w-96 border border-gray-700">
-        <h1 className="text-3xl font-bold text-green-500 mb-6 text-center">
+        <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center">
           Login
         </h1>
 
@@ -62,7 +62,7 @@ const Login = () => {
               name="email"
               value={email}
               onChange={onChange}
-              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               placeholder="sample@gmail.com"
               required
             />
@@ -75,7 +75,7 @@ const Login = () => {
               name="password"
               value={password}
               onChange={onChange}
-              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               placeholder="******"
               required
             />
@@ -83,7 +83,7 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded transition duration-300"
           >
             Login
           </button>
@@ -91,7 +91,7 @@ const Login = () => {
 
         <p className="text-gray-400 text-sm text-center mt-4">
           Don't you have an account?{" "}
-          <Link to="/signup" className="text-green-400 hover:underline">
+          <Link to="/signup" className="text-indigo-400 hover:underline">
             Sign Up
           </Link>
         </p>
