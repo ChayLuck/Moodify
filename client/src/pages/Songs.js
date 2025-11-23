@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from "../context/ToastContext";
 
 const Songs = () => {
@@ -20,7 +19,6 @@ const Songs = () => {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [trackToFavorite, setTrackToFavorite] = useState(null);
 
-  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
 
   const MOODS = [
@@ -301,6 +299,7 @@ const Songs = () => {
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
             <div className="flex-1">
               <iframe
+                title="Spotify Web Player"
                 src={`https://open.spotify.com/embed/track/${playingTrack}?theme=0&autoplay=1`}
                 width="100%"
                 height="80"
