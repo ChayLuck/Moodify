@@ -188,4 +188,23 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack, updateFavoriteMood };
+//PROFIL IKONU GÜNCELLEME
+const updateUserIcon = async (req, res) => {
+  try {
+    const { userId, icon } = req.body;
+
+    if (!userId || !icon)
+      return res.status(400).json({ message: "Missing data" });
+
+    await User.findByIdAndUpdate(userId, { profileIcon: icon });
+
+    res.json({ success: true, icon });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+
+module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack, updateFavoriteMood, updateUserIcon };

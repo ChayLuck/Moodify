@@ -50,6 +50,7 @@ const registerUser = async (req, res) => {
                 _id: user.id,
                 username: user.username,
                 email: user.email,
+                profileIcon:user.profileIcon,
                 token: generateToken(user.id) // Token ver
             });
         } else {
@@ -77,6 +78,7 @@ const loginUser = async (req, res) => {
                 _id: user.id,
                 username: user.username,
                 email: user.email,
+                profileIcon:user.profileIcon,
                 token: generateToken(user.id)
             });
         } else {

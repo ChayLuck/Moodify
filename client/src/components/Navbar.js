@@ -1,37 +1,56 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  
-  // Tarayıcı hafızasından giriş yapmış kullanıcıyı kontrol et
-  const user = JSON.parse(localStorage.getItem('user'));
+
+  // localStorage'daki user'ı state'e alıyoruz
+  const [user, setUser] = useState(() =>
+    JSON.parse(localStorage.getItem("user"))
+  );
+
+  // localStorage değiştiğinde Navbar otomatik güncellensin
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const stored = JSON.parse(localStorage.getItem("user"));
+      setUser(stored);
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user'); // Hafızayı temizle
-    navigate('/login'); // Giriş sayfasına at
-    window.location.reload(); // Sayfayı yenile ki Navbar güncellensin
+    localStorage.removeItem("user");
+    navigate("/login");
+    window.location.reload();
   };
 
   return (
     <nav className="bg-gray-900 text-white p-4 shadow-lg border-b border-gray-800">
       <div className="container mx-auto flex justify-between items-center">
-        
         {/* LOGO */}
-        <Link to="/" className="text-2xl font-bold text-green-500 flex items-center gap-2">
+        <Link
+          to="/"
+          className="text-2xl font-bold text-green-500 flex items-center gap-2"
+        >
           Moodify 🎵🎬
         </Link>
 
-        {/* LİNKLER */}
+        {/* LINKS */}
         <div className="flex items-center space-x-6">
-          
           {user ? (
-            // --- GİRİŞ YAPMIŞ KULLANICI İÇİN ---
             <>
-              <Link to="/dashboard" className="hover:text-green-400 transition font-medium">
+              <Link
+                to="/dashboard"
+                className="hover:text-green-400 transition font-medium"
+              >
                 Dashboard
               </Link>
-              
-              <Link to="/profile" className="hover:text-green-400 transition font-medium">
+
+              <Link
+                to="/profile"
+                className="hover:text-green-400 transition font-medium"
+              >
                 My Profile
               </Link>
 
@@ -44,14 +63,17 @@ const Navbar = () => {
               </Link>
 
               <div className="flex items-center gap-4 border-l border-gray-700 pl-4">
-                <span className="text-gray-400 text-sm hidden md:block">
-                  <Link to="/profile">
-                    {user.username}
-                  </Link>
-                </span>
-                
-                <button 
-                  onClick={handleLogout} 
+                {/* PROFILE ICON */}
+                <Link to="/profile">
+                  <img
+                    src={user.profileIcon || "/icons/default.png"}
+                    alt="Profile"
+                    className="w-10 h-10 rounded-full object-cover border border-gray-700 hover:opacity-80 transition"
+                  />
+                </Link>
+
+                <button
+                  onClick={handleLogout}
                   className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm font-bold transition"
                 >
                   Logout
@@ -59,19 +81,19 @@ const Navbar = () => {
               </div>
             </>
           ) : (
-            // --- GİRİŞ YAPMAMIŞ KULLANICI İÇİN ---
             <>
               <Link to="/login" className="hover:text-green-400 transition">
                 Login
               </Link>
-              
-              <Link to="/signup" className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-green-500/20">
+
+              <Link
+                to="/signup"
+                className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-green-500/20"
+              >
                 Sign Up
               </Link>
-              
             </>
           )}
-
         </div>
       </div>
     </nav>
