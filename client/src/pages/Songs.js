@@ -132,7 +132,7 @@ const Songs = () => {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
 
-        <h1 className="text-3xl font-bold text-green-500 mb-6 text-center flex items-center justify-center gap-2">
+        <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
           🎵 <span className="text-white">Discover Music</span>
         </h1>
 
@@ -141,13 +141,13 @@ const Songs = () => {
           <input
             type="text"
             placeholder="Search for a song..."
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-green-500 text-lg"
+            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           <button
             type="submit"
-            className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-full font-bold text-lg transition"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg transition"
             disabled={loading}
           >
             {loading ? '...' : 'Search'}
@@ -159,7 +159,7 @@ const Songs = () => {
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
 
             <p className="text-gray-400 mb-2 md:mb-0">
-              Found <span className="text-green-400 font-bold">{tracks.length}</span> songs.
+              Found <span className="text-indigo-400 font-bold">{tracks.length}</span> songs.
             </p>
 
             <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ const Songs = () => {
               <select
                 value={sortType}
                 onChange={handleSortChange}
-                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 cursor-pointer"
+                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 cursor-pointer"
               >
                 <option value="relevance">Recommended</option>
                 <option value="popularity_desc">Popularity (High to Low)</option>
@@ -185,17 +185,16 @@ const Songs = () => {
             <div
               key={track.id}
               onClick={() => fetchDetailsAndOpen(track.id)}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+              className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
             >
               <div className="relative aspect-square overflow-hidden">
-                <img src={track.image} alt={track.name} className="w-full h-full object-cover transition duration-500 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                  <span className="text-white text-4xl">🔍</span>
-                </div>
+                <img src={track.image} alt={track.name} className="w-full h-full object-cover transition duration-500 " />
+                {/* <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                </div> */}
               </div>
 
               <div className="p-3">
-                <h3 className="font-bold text-white truncate group-hover:text-green-400">{track.name}</h3>
+                <h3 className="font-bold text-white truncate group-hover:text-indigo-400">{track.name}</h3>
                 <p className="text-gray-400 text-xs truncate">{track.artist}</p>
               </div>
 
@@ -214,17 +213,17 @@ const Songs = () => {
             <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
 
             {modalLoading ? (
-              <div className="p-20 w-full text-center text-green-500 text-xl">Loading Details...</div>
+              <div className="p-20 w-full text-center text-indigo-400 text-xl">Loading Details...</div>
             ) : (
               <>
-                <div className="w-full md:w-1/2 h-80">
+                <div className="w-full md:w-1/2 h-85">
                   <img src={selectedTrack.image} alt={selectedTrack.name} className="w-full h-full object-cover" />
                 </div>
 
                 <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
 
                   <h2 className="text-3xl font-bold text-white mb-2">{selectedTrack.name}</h2>
-                  <p className="text-xl text-green-400 mb-6">{selectedTrack.artist}</p>
+                  <p className="text-xl text-indigo-400 mb-6">{selectedTrack.artist}</p>
 
                   <div className="space-y-3 text-gray-300 text-sm mb-8">
                     <div className="flex justify-between border-b border-gray-800 pb-2">
@@ -238,7 +237,7 @@ const Songs = () => {
                     <div className="flex justify-between items-center">
                       <span>Popularity</span>
                       <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-green-500" style={{ width: `${selectedTrack.popularity}%` }}></div>
+                        <div className="h-full bg-indigo-400" style={{ width: `${selectedTrack.popularity}%` }}></div>
                       </div>
                     </div>
                   </div>
@@ -246,16 +245,16 @@ const Songs = () => {
                   <div className="flex gap-4 mt-auto">
                     <button
                       onClick={() => setPlayingTrack(selectedTrack.id)}
-                      className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold"
+                      className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold"
                     >
-                      ▶ Play Now
+                      Play Now
                     </button>
 
                     <button
                       onClick={() => initiateFavorite(selectedTrack)}
                       className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
                     >
-                      ❤️ Add To Favorites
+                      Add To Favorites
                     </button>
                   </div>
 
@@ -295,7 +294,7 @@ const Songs = () => {
 
       {/* PLAYER */}
       {playingTrack && (
-        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-green-900 p-4 z-[60] shadow-2xl">
+        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-indigo-400 p-4 z-[60] shadow-2xl">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
             <div className="flex-1">
               <iframe

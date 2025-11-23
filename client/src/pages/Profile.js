@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import ProfileIconPicker from "../components/ProfileIconPicker"; // ⭐ YENİ IMPORT
+import ProfileIconPicker from "../components/ProfileIconPicker";
+import { useToast } from "../context/ToastContext";
 
 const MOODS = [
   { name: "Happy", emoji: "😊", color: "bg-yellow-500 text-black" },
@@ -21,23 +22,7 @@ const Profile = () => {
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [trackToEdit, setTrackToEdit] = useState(null);
-
-  // ⭐ PROFIL IKON MODALI STATE
   const [showIconModal, setShowIconModal] = useState(false);
-
-  // --- TOAST ---
-  const [toast, setToast] = useState({
-    open: false,
-    type: "success",
-    message: "",
-  });
-
-  const showToast = (type, message) => {
-    setToast({ open: true, type, message });
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, open: false }));
-    }, 3000);
-  };
 
   // --- REMOVE CONFIRM MODAL ---
   const [removeConfirm, setRemoveConfirm] = useState({
@@ -48,12 +33,15 @@ const Profile = () => {
   });
 
   const navigate = useNavigate();
+  const { showToast } = useToast(); // ✅ GLOBAL TOAST
+
   const currentUser = JSON.parse(localStorage.getItem("user"));
   const currentUserId = currentUser ? currentUser._id : null;
 
   // --- FETCH PROFILE ---
   useEffect(() => {
     if (!currentUserId) {
+      showToast("info", "Please login to see your profile.");
       navigate("/login");
       return;
     }
@@ -66,12 +54,14 @@ const Profile = () => {
         setUserProfile(res.data);
         setLoading(false);
       } catch (error) {
+        console.error(error);
         showToast("error", "Profile could not be loaded.");
         setLoading(false);
       }
     };
 
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, currentUserId]);
 
   // --- SORTING ---
@@ -136,6 +126,7 @@ const Profile = () => {
           showToast("success", "Track removed from favorites.");
           setRemoveConfirm({ open: false });
         } catch (error) {
+          console.error(error);
           showToast("error", "Could not remove track.");
         }
       },
@@ -172,6 +163,7 @@ const Profile = () => {
 
       showToast("success", "Mood updated successfully!");
     } catch (error) {
+      console.error(error);
       showToast("error", "Failed to update mood.");
     }
   };
@@ -181,7 +173,7 @@ const Profile = () => {
     return found ? found.color : "bg-gray-600 text-white";
   };
 
-  // --- PROFIL IKONU GÜNCELLE ---
+  // --- PROFILE ICON UPDATE ---
   const updateProfileIcon = async (icon) => {
     try {
       await axios.put("http://localhost:5000/api/users/update-icon", {
@@ -189,16 +181,15 @@ const Profile = () => {
         icon,
       });
 
-      // Ekrandaki profili güncelle
       setUserProfile((prev) => ({ ...prev, profileIcon: icon }));
 
-      // localStorage'taki user objesini güncelle
       const updatedUser = { ...currentUser, profileIcon: icon };
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       setShowIconModal(false);
       showToast("success", "Profile icon updated!");
     } catch (err) {
+      console.error(err);
       showToast("error", "Failed to update profile icon.");
     }
   };
@@ -222,38 +213,12 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
-      {/* TOAST */}
-      {toast.open && (
-        <div className="fixed top-48 left-1/2 -translate-x-1/2 z-[9999] animate-slide-down">
-          <div
-            className={`
-            flex items-start gap-3 px-5 py-3 rounded-xl shadow-2xl border
-            backdrop-blur bg-black/90 text-white
-            ${toast.type === "success" ? "border-emerald-400" : ""}
-            ${toast.type === "error" ? "border-red-400" : ""}
-            ${toast.type === "info" ? "border-blue-400" : ""}
-          `}
-          >
-            <div className="text-sm max-w-sm">{toast.message}</div>
-            <button
-              onClick={() =>
-                setToast((prev) => ({ ...prev, open: false }))
-              }
-              className="text-gray-400 hover:text-gray-200 text-lg leading-none ml-2"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-6xl mx-auto">
         {/* PROFILE HEADER */}
         <div className="bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-700 mb-10">
-          <div className="h-32 bg-gradient-to-r from-green-600 to-blue-900"></div>
+          <div className="h-32 bg-gradient-to-r from-indigo-400 to-indigo-900"></div>
           <div className="px-8 pb-8 text-center relative">
             <div className="relative -top-12 inline-block">
-              {/* ARTIK HARF YERINE IKON */}
               <div className="w-32 h-32 rounded-full border-4 border-gray-800 overflow-hidden shadow-xl bg-gray-900">
                 <img
                   src={userProfile?.profileIcon || "/icons/default.png"}
@@ -269,7 +234,7 @@ const Profile = () => {
 
             <button
               onClick={() => setShowIconModal(true)}
-              className="mt-3 text-sm text-blue-400 hover:text-blue-300 underline"
+              className="mt-3 text-sm text-indigo-400 hover:text-indigo-500 underline"
             >
               Change Profile Icon
             </button>
@@ -280,7 +245,7 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
             🎵 My Favorites{" "}
-            <span className="text-green-500 text-sm">
+            <span className="text-indigo-400 text-sm">
               ({userProfile?.favoriteTracks?.length})
             </span>
           </h2>
@@ -308,7 +273,7 @@ const Profile = () => {
               <div
                 key={track._id}
                 onClick={() => openTrackModal(track)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
+                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
               >
                 <div className="relative aspect-square">
                   <img
@@ -326,7 +291,7 @@ const Profile = () => {
                 </div>
 
                 <div className="p-3">
-                  <h3 className="font-bold text-white truncate group-hover:text-green-400">
+                  <h3 className="font-bold text-white truncate group-hover:text-indigo-400">
                     {track.title}
                   </h3>
                   <p className="text-gray-400 text-xs truncate">
@@ -372,7 +337,7 @@ const Profile = () => {
               <h2 className="text-3xl font-bold text-white mb-2">
                 {selectedTrack.title}
               </h2>
-              <p className="text-xl text-green-400 mb-6">
+              <p className="text-xl text-indigo-400 mb-6">
                 {selectedTrack.artist}
               </p>
 
@@ -392,7 +357,7 @@ const Profile = () => {
                   <span>Popularity</span>
                   <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-green-500"
+                      className="h-full bg-indigo-400"
                       style={{ width: `${selectedTrack.popularity}%` }}
                     ></div>
                   </div>
@@ -409,7 +374,7 @@ const Profile = () => {
                       selectedTrack.userMood
                     )}`}
                   >
-                    {selectedTrack.userMood} (Change)
+                    {selectedTrack.userMood} 
                   </button>
                 </div>
               </div>
@@ -417,9 +382,9 @@ const Profile = () => {
               <div className="flex gap-4 mt-auto">
                 <button
                   onClick={() => setPlayingTrack(selectedTrack._id)}
-                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold shadow-lg"
+                  className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg"
                 >
-                  ▶ Play Now
+                  Play Now
                 </button>
                 <button
                   onClick={() =>
@@ -428,7 +393,7 @@ const Profile = () => {
                       selectedTrack.title
                     )
                   }
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold border border-red-900"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold border border-red-900"
                 >
                   Remove
                 </button>
@@ -438,7 +403,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* PROFIL IKON MODALI */}
+      {/* PROFILE ICON MODAL */}
       {showIconModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]">
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl">
@@ -498,7 +463,7 @@ const Profile = () => {
 
             <p className="text-gray-400 mb-6 text-sm">
               Are you sure you want to remove{" "}
-              <span className="text-green-400 font-semibold">
+              <span className="text-indigo-400 font-semibold">
                 {removeConfirm.trackName}
               </span>{" "}
               from your favorites?
@@ -514,7 +479,7 @@ const Profile = () => {
 
               <button
                 onClick={removeConfirm.onConfirm}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold"
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold"
               >
                 Remove
               </button>
@@ -525,7 +490,7 @@ const Profile = () => {
 
       {/* PLAYER */}
       {playingTrack && (
-        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-green-900 p-4 backdrop-blur-lg z-[70]">
+        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-indigo-400 p-4 backdrop-blur-lg z-[70]">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
             <div className="flex-1">
               <iframe

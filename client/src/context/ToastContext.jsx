@@ -28,7 +28,7 @@ export const ToastProvider = ({ children }) => {
             className={`
               flex items-start gap-3 px-5 py-3 rounded-xl shadow-2xl border 
               backdrop-blur bg-black/90 text-white
-              ${toast.type === "success" ? "border-emerald-400" : ""}
+              ${toast.type === "success" ? "border-indigo-400" : ""}
               ${toast.type === "error" ? "border-red-400" : ""}
               ${toast.type === "info" ? "border-blue-400" : ""}
             `}

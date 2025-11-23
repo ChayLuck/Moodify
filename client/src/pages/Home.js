@@ -138,8 +138,8 @@ const Home = () => {
   return (
     <div className="bg-gray-900 min-h-screen text-white pb-32">
       {/* HERO SECTION */}
-      <div className="relative bg-gradient-to-r from-green-900 to-gray-900 py-24 px-6 text-center shadow-2xl">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 animate-pulse">
+      <div className="relative bg-gradient-to-r from-indigo-500 to-gray-900 py-24 px-6 text-center shadow-2xl">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 animate-pulse">
           Moodify
         </h1>
         <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
@@ -149,14 +149,14 @@ const Home = () => {
           {user ? (
             <Link
               to="/dashboard"
-              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-green-500/50"
+              className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
             >
-              Get Recommendations 🚀
+              Get Recommendations
             </Link>
           ) : (
             <Link
               to="/signup"
-              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-green-500/50"
+              className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
             >
               Start for Free
             </Link>
@@ -215,7 +215,7 @@ const Home = () => {
               <div
                 key={song.id}
                 onClick={() => openTrackModal(song.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-blue-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer"
+                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer"
               >
                 <div className="relative">
                   <img
@@ -223,11 +223,11 @@ const Home = () => {
                     alt={song.name}
                     className="w-full h-64 object-cover transition duration-300 group-hover:opacity-80"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
+                  {/* <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
                     <span className="bg-green-500 text-black rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg">
                       🔍
                     </span>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="p-4">
                   <h3 className="font-bold truncate text-lg text-white group-hover:text-green-400 transition">

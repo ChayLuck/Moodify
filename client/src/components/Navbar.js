@@ -26,7 +26,7 @@ const Navbar = () => {
   // Sadece alt çizgi ile göster
   const isActive = (path) =>
     location.pathname === path
-      ? "border-b-2 border-green-500 pb-1"
+      ? "border-b-2 border-indigo-500 pb-1"
       : "opacity-80 hover:opacity-100 transition";
 
   return (
@@ -35,7 +35,7 @@ const Navbar = () => {
 
         <Link
           to="/"
-          className="text-2xl font-bold text-green-500 flex items-center gap-2"
+          className="text-2xl font-bold text-indigo-400 flex items-center gap-2"
         >
           Moodify 🎵🎬
         </Link>
@@ -80,7 +80,7 @@ const Navbar = () => {
 
               <Link
                 to="/signup"
-                className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-green-500/20"
+                className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-full font-bold transition shadow-lg shadow-indigo-500/20"
               >
                 Sign Up
               </Link>
