@@ -54,7 +54,7 @@ const getRecommendations = async (req, res) => {
             }
         }
 
-        console.log(`🔍 Arama Yapılıyor: "${searchQuery}"`);
+        console.log(`🔍 Searching: "${searchQuery}"`);
 
         // 2. SPOTIFY ARAMA
         const token = await getSpotifyToken();
@@ -67,7 +67,7 @@ const getRecommendations = async (req, res) => {
         const items = spotifyRes.data.tracks.items;
         const recommendedTrack = items.length > 0 ? items[0] : null;
 
-        if (!recommendedTrack) throw new Error("Şarkı bulunamadı");
+        if (!recommendedTrack) throw new Error("Song Cannot Found");
 
         // 3. TMDB FİLM (Aynı)
         let genreId = 35;
@@ -100,7 +100,7 @@ const getRecommendations = async (req, res) => {
         res.json({ track: recommendedTrack, movie: recommendedMovie, note: personalizationNote });
 
     } catch (error) {
-        console.error("Algoritma Hatası:", error.message);
+        console.error("Algorithm Error:", error.message);
         res.status(500).json({ message: 'Tavsiye alınamadı' });
     }
 };

@@ -16,10 +16,15 @@ const UserSchema = new mongoose.Schema({
     required: true 
   },
 
-  // Favori Şarkılar (Basitleştirilmiş Özet)
+  //PROFIL IKONU ALANI
+  profileIcon: {
+    type: String,
+    default: "/icons/account.png"
+  },
+
   favoriteTracks: [{
     spotifyId: { type: String, required: true },
-    mood: { type: String, required: true } // Kullanıcının seçtiği mod
+    mood: { type: String, required: true }
   }],
 
   createdAt: { type: Date, default: Date.now }
