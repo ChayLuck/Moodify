@@ -1,21 +1,19 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // localStorage'daki user'ı state'e alıyoruz
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("user"))
   );
 
-  // localStorage değiştiğinde Navbar otomatik güncellensin
   useEffect(() => {
     const interval = setInterval(() => {
       const stored = JSON.parse(localStorage.getItem("user"));
       setUser(stored);
     }, 300);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -25,10 +23,16 @@ const Navbar = () => {
     window.location.reload();
   };
 
+  // Sadece alt çizgi ile göster
+  const isActive = (path) =>
+    location.pathname === path
+      ? "border-b-2 border-green-500 pb-1"
+      : "opacity-80 hover:opacity-100 transition";
+
   return (
     <nav className="bg-gray-900 text-white p-4 shadow-lg border-b border-gray-800">
       <div className="container mx-auto flex justify-between items-center">
-        {/* LOGO */}
+
         <Link
           to="/"
           className="text-2xl font-bold text-green-500 flex items-center gap-2"
@@ -36,34 +40,22 @@ const Navbar = () => {
           Moodify 🎵🎬
         </Link>
 
-        {/* LINKS */}
         <div className="flex items-center space-x-6">
           {user ? (
             <>
-              <Link
-                to="/dashboard"
-                className="hover:text-green-400 transition font-medium"
-              >
+              <Link to="/dashboard" className={isActive("/dashboard")}>
                 Dashboard
               </Link>
 
-              <Link
-                to="/profile"
-                className="hover:text-green-400 transition font-medium"
-              >
-                My Profile
-              </Link>
-
-              <Link to="/songs" className="hover:text-green-400 transition">
+              <Link to="/songs" className={isActive("/songs")}>
                 Songs
               </Link>
 
-              <Link to="/movies" className="hover:text-yellow-400 transition">
+              <Link to="/movies" className={isActive("/movies")}>
                 Movies
               </Link>
 
               <div className="flex items-center gap-4 border-l border-gray-700 pl-4">
-                {/* PROFILE ICON */}
                 <Link to="/profile">
                   <img
                     src={user.profileIcon || "/icons/default.png"}
@@ -82,7 +74,7 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/login" className="hover:text-green-400 transition">
+              <Link to="/login" className={isActive("/login")}>
                 Login
               </Link>
 
