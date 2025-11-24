@@ -1,86 +1,69 @@
 import { useState } from "react";
 import axios from "axios";
 import { useToast } from "../context/ToastContext";
+import { useNavigate } from "react-router-dom";
 
 const Movies = () => {
-  const { showToast } = useToast(); // Global toast hook
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-
-  // --- SORT STATE ---
   const [sortType, setSortType] = useState("relevance");
 
-  // --- MODAL STATE ---
+  // --- MODAL & FAVORITE STATES ---
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [movieToFavorite, setMovieToFavorite] = useState(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  // --- SEARCH FUNCTION ---
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  const MOODS = [
+    { name: "Happy", emoji: "😊", color: "bg-yellow-500" },
+    { name: "Sad", emoji: "😢", color: "bg-blue-600" },
+    { name: "Energetic", emoji: "🔥", color: "bg-red-500" },
+    { name: "Chill", emoji: "🍃", color: "bg-green-500" },
+    { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
+  ];
+
+  // --- SEARCH ---
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query) return;
-
-    setLoading(true);
-    setMovies([]);
-    setSearched(false);
-    setSortType("relevance"); // Reset sort on new search
-
+    setLoading(true); setMovies([]); setSearched(false); setSortType("relevance");
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/movies/search?q=${query}`
-      );
+      const res = await axios.get(`http://localhost:5000/api/movies/search?q=${query}`);
       setMovies(res.data);
     } catch (error) {
       console.error("Search error:", error);
-      showToast("error", "Error searching for movies. Please try again.");
+      showToast("error", "Error searching for movies.");
     } finally {
-      setLoading(false);
-      setSearched(true);
+      setLoading(false); setSearched(true);
     }
   };
 
-  // --- SORT FUNCTION ---
   const handleSortChange = (e) => {
     const type = e.target.value;
     setSortType(type);
-
     let sortedMovies = [...movies];
-
-    switch (type) {
-      case "rating_desc":
-        sortedMovies.sort((a, b) => b.rating - a.rating);
-        break;
-      case "rating_asc":
-        sortedMovies.sort((a, b) => a.rating - b.rating);
-        break;
-      case "year_desc":
-        sortedMovies.sort(
-          (a, b) => parseInt(b.releaseDate) - parseInt(a.releaseDate)
-        );
-        break;
-      case "year_asc":
-        sortedMovies.sort(
-          (a, b) => parseInt(a.releaseDate) - parseInt(b.releaseDate)
-        );
-        break;
-      default:
-        break;
-    }
+    // ... Sıralama mantığı aynı ...
+    if (type === "rating_desc") sortedMovies.sort((a, b) => b.rating - a.rating);
+    else if (type === "rating_asc") sortedMovies.sort((a, b) => a.rating - b.rating);
+    else if (type === "year_desc") sortedMovies.sort((a, b) => parseInt(b.releaseDate) - parseInt(a.releaseDate));
+    else if (type === "year_asc") sortedMovies.sort((a, b) => parseInt(a.releaseDate) - parseInt(b.releaseDate));
     setMovies(sortedMovies);
   };
 
-  // --- MODAL FUNCTIONS ---
   const fetchDetailsAndOpen = async (movieId) => {
     setModalLoading(true);
     setSelectedMovie({ id: movieId });
     document.body.style.overflow = "hidden";
-
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/movies/details/${movieId}`
-      );
+      const res = await axios.get(`http://localhost:5000/api/movies/details/${movieId}`);
       setSelectedMovie(res.data);
     } catch (error) {
       console.error("Detail error:", error);
@@ -95,6 +78,36 @@ const Movies = () => {
     document.body.style.overflow = "auto";
   };
 
+  // --- FAVORİ EKLEME MANTIĞI ---
+  const initiateFavorite = (movie) => {
+    if (!user) {
+        setShowLoginPrompt(true);
+        return;
+    }
+    setMovieToFavorite(movie);
+    setShowMoodModal(true);
+  };
+
+  const saveFavoriteWithMood = async (mood) => {
+    try {
+        await axios.post("http://localhost:5000/api/users/favorites/add-movie", {
+            userId: user._id,
+            movie: {
+                id: movieToFavorite.id,
+                title: movieToFavorite.title,
+                posterPath: movieToFavorite.poster, 
+            },
+            mood: mood
+        });
+        showToast("success", `Movie added to favorites as ${mood}! 🎬`);
+        setShowMoodModal(false);
+    } catch (error) {
+        console.error(error);
+        showToast("error", error.response?.data?.message || "Something went wrong.");
+        setShowMoodModal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
@@ -103,43 +116,18 @@ const Movies = () => {
         </h1>
 
         {/* SEARCH BAR */}
-        <form
-          onSubmit={handleSearch}
-          className="flex gap-4 mb-8 max-w-3xl mx-auto"
-        >
-          <input
-            type="text"
-            placeholder="Search for a movie..."
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="bg-indigo-500 hover:bg-indigo-600 text-black px-8 py-4 rounded-full font-bold text-lg transition"
-            disabled={loading}
-          >
-            {loading ? "..." : "Search"}
-          </button>
+        <form onSubmit={handleSearch} className="flex gap-4 mb-8 max-w-3xl mx-auto">
+          <input type="text" placeholder="Search for a movie..." className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-black px-8 py-4 rounded-full font-bold text-lg transition" disabled={loading}>{loading ? "..." : "Search"}</button>
         </form>
 
-        {/* --- RESULTS INFO & SORTING --- */}
+        {/* RESULTS INFO & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
-            <p className="text-gray-400 mb-2 md:mb-0">
-              Found{" "}
-              <span className="text-indigo-400 font-bold">{movies.length}</span>{" "}
-              results for "{query}"
-            </p>
-
-            {/* SORT DROPDOWN */}
+            <p className="text-gray-400">Found <span className="text-indigo-400 font-bold">{movies.length}</span> results for "{query}"</p>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-400">Sort By:</span>
-              <select
-                value={sortType}
-                onChange={handleSortChange}
-                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 cursor-pointer"
-              >
+              <select value={sortType} onChange={handleSortChange} className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer">
                 <option value="relevance">Recommended</option>
                 <option value="rating_desc">Rating (High to Low)</option>
                 <option value="rating_asc">Rating (Low to High)</option>
@@ -153,191 +141,43 @@ const Movies = () => {
         {/* MOVIE GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {movies.map((movie) => (
-            <div
-              key={movie.id}
-              onClick={() => fetchDetailsAndOpen(movie.id)}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
-            >
-              {/* POSTER + PLACEHOLDER */}
+            <div key={movie.id} onClick={() => fetchDetailsAndOpen(movie.id)} className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700">
               <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
-                {movie.poster ? (
-                  <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className="w-full h-full object-cover transition duration-500 "
-                  />
-                ) : (
-                  <span className="text-5xl text-gray-500">🎞️</span>
-                )}
-
-                <div className="absolute top-2 right-2 bg-black/70 text-indigo-100 text-xs font-bold px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">
-                  ⭐ {movie.rating.toFixed(1)}
-                </div>
-                <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                  {movie.releaseDate}
-                </div>
+                {movie.poster ? <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" /> : <span className="text-5xl text-gray-500">🎞️</span>}
+                <div className="absolute top-2 right-2 bg-black/70 text-indigo-100 text-xs font-bold px-2 py-1 rounded backdrop-blur-sm">⭐ {movie.rating.toFixed(1)}</div>
               </div>
-
-              <div className="p-3">
-                <h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">
-                  {movie.title}
-                </h3>
-              </div>
+              <div className="p-3"><h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">{movie.title}</h3></div>
             </div>
           ))}
         </div>
 
         {/* NO RESULTS */}
-        {movies.length === 0 && !loading && searched && (
-          <div className="text-center text-gray-500 mt-20">
-            <p className="text-xl">🎬</p>
-            <p>No movies found matching your criteria.</p>
-          </div>
-        )}
+        {movies.length === 0 && !loading && searched && <div className="text-center text-gray-500 mt-20"><p className="text-xl">🎬</p><p>No movies found matching your criteria.</p></div>}
       </div>
 
       {/* --- DETAIL MODAL --- */}
       {selectedMovie && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center"
-            >
-              &times;
-            </button>
-
-            {modalLoading ? (
-              <div className="p-20 w-full text-center text-indigo-400 text-xl">
-                Loading Details...
-              </div>
-            ) : (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeModal}>
+          <div className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">&times;</button>
+            {modalLoading ? <div className="p-20 w-full text-center text-indigo-400 text-xl">Loading Details...</div> : (
               <>
-                {/* LEFT: Poster (with same placeholder logic) */}
                 <div className="w-full md:w-1/3 h-96 md:h-auto relative bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
-                  {selectedMovie.poster ? (
-                    <img
-                      src={selectedMovie.poster}
-                      alt={selectedMovie.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-6xl text-gray-500">🎞️</span>
-                  )}
+                  {selectedMovie.poster ? <img src={selectedMovie.poster} alt={selectedMovie.title} className="w-full h-full object-cover" /> : <span className="text-6xl text-gray-500">🎞️</span>}
                 </div>
-
-                {/* RIGHT: Info */}
                 <div className="w-full md:w-2/3 p-8 flex flex-col">
-                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                    {selectedMovie.title}
-                  </h2>
-
-                  {/* Genres */}
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    {selectedMovie.genres?.map((g) => (
-                      <span
-                        key={g}
-                        className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300"
-                      >
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-6 text-sm text-gray-400 mb-6 bg-gray-800/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-1">
-                      📅{" "}
-                      <span className="text-white">
-                        {selectedMovie.releaseDate}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      ⭐{" "}
-                      <span className="text-indigo-100 font-bold">
-                        {selectedMovie.rating.toFixed(1)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      ⏱️{" "}
-                      <span className="text-white">
-                        {selectedMovie.runtime} min
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Overview */}
-                  <h3 className="text-lg font-semibold text-indigo-400 mb-2">
-                    Overview
-                  </h3>
-                  <p className="text-gray-300 leading-relaxed mb-6 text-sm md:text-base">
-                    {selectedMovie.overview || "No overview available."}
-                  </p>
-
-                  {/* Director & Cast */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                        Director
-                      </h4>
-                      <p className="text-gray-300">{selectedMovie.director}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                        Top Cast
-                      </h4>
-                      <div className="flex flex-col gap-2">
-                        {selectedMovie.cast?.map((actor) => (
-                          <div
-                            key={actor.name}
-                            className="flex items-center gap-3"
-                          >
-                            <img
-                              src={
-                                actor.photo ||
-                                "https://via.placeholder.com/50"
-                              }
-                              alt={actor.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <div>
-                              <p className="text-sm text-white font-medium">
-                                {actor.name}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {actor.character}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Buttons */}
+                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{selectedMovie.title}</h2>
+                  <div className="flex flex-wrap gap-3 mb-4">{selectedMovie.genres?.map((g) => <span key={g} className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300">{g}</span>)}</div>
+                  <p className="text-gray-300 leading-relaxed mb-6 text-sm md:text-base">{selectedMovie.overview || "No overview available."}</p>
+                  
                   <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
-                    <button
-                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition border border-gray-600"
-                      onClick={closeModal}
+                    <button className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition border border-gray-600" onClick={closeModal}>Close</button>
+                    {/* 👇 FAVORİ BUTONU */}
+                    <button 
+                        className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center gap-2"
+                        onClick={() => initiateFavorite(selectedMovie)}
                     >
-                      Close
-                    </button>
-                    <button
-                      className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center gap-2"
-                      onClick={() =>
-                        showToast(
-                          "info",
-                          "Movie favorites feature coming soon! 🎬❤️"
-                        )
-                      }
-                    >
-                      Add to Favorites
+                      ❤️ Add to Favorites
                     </button>
                   </div>
                 </div>
@@ -346,6 +186,38 @@ const Movies = () => {
           </div>
         </div>
       )}
+
+      {/* --- MOOD MODAL (YENİ) --- */}
+      {showMoodModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-2 text-white">Select Mood</h3>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {MOODS.map((m) => (
+                <button key={m.name} onClick={() => saveFavoriteWithMood(m.name)} className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}>
+                  <span className="text-xl">{m.emoji}</span> {m.name}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowMoodModal(false)} className="mt-6 text-gray-400 hover:text-white underline text-sm">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* --- LOGIN PROMPT MODAL (YENİ) --- */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[65] p-4 backdrop-blur-md">
+          <div className="bg-gray-900 p-8 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-3 text-white">Login required</h3>
+            <p className="text-gray-300 text-sm mb-6">You need to be logged in to add movies to your favorites.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLoginPrompt(false)} className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-semibold">Maybe later</button>
+              <button onClick={() => { setShowLoginPrompt(false); navigate("/login"); }} className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-bold">Go to Login</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

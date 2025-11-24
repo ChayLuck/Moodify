@@ -16,14 +16,21 @@ const UserSchema = new mongoose.Schema({
     required: true 
   },
 
-  //PROFIL IKONU ALANI
+  // PROFIL IKONU ALANI
   profileIcon: {
     type: String,
     default: "/icons/account.png"
   },
 
+  // FAVORİ ŞARKILAR
   favoriteTracks: [{
     spotifyId: { type: String, required: true },
+    mood: { type: String, required: true }
+  }],
+
+  // YENİ EKLENEN: FAVORİ FİLMLER
+  favoriteMovies: [{
+    tmdbId: { type: String, required: true },
     mood: { type: String, required: true }
   }],
 
