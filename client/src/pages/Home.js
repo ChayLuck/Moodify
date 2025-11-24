@@ -276,6 +276,9 @@ const Home = () => {
                   <div className="space-y-3 text-gray-300 text-sm mb-8">
                     <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span><span className="text-white">{selectedTrack.album}</span></div>
                     <div className="flex justify-between border-b border-gray-800 pb-2"><span>Release Date</span><span className="text-white">{selectedTrack.releaseDate}</span></div>
+                    {/* 👇 SÜRE BİLGİSİ EKLENDİ */}
+                    <div className="flex justify-between border-b border-gray-800 pb-2"><span>Duration</span><span className="text-white">{selectedTrack.duration} min</span></div>
+                    
                     <div className="flex justify-between items-center">
                       <span>Popularity</span>
                       <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">

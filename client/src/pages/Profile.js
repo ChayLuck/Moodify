@@ -21,7 +21,6 @@ const Profile = () => {
   const [sortType, setSortType] = useState("date_added_newest");
   const [playingTrack, setPlayingTrack] = useState(null);
   
-  // HEM FİLM HEM ŞARKI İÇİN ORTAK SEÇİM STATE'İ
   const [selectedItem, setSelectedItem] = useState(null); 
   
   const [showMoodModal, setShowMoodModal] = useState(false);
@@ -68,15 +67,12 @@ const Profile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, currentUserId]);
 
-  // --- SIRALAMA (SORT) ---
+  // --- SIRALAMA DEĞİŞİMİ ---
   const handleSortChange = (e) => {
-    const type = e.target.value;
-    setSortType(type);
-    // Sıralama mantığı render sırasında (getItemsToDisplay içinde) yapılabilir
-    // ya da burada state güncellenebilir. Basitlik için render'da bırakıyoruz.
+    setSortType(e.target.value);
   };
 
-  // --- SİLME FONKSİYONU (GÜNCELLENDİ) ---
+  // --- SİLME FONKSİYONU ---
   const handleRemoveFavorite = (itemId, itemName) => {
     setRemoveConfirm({
       open: true,
@@ -84,7 +80,6 @@ const Profile = () => {
       itemName,
       onConfirm: async () => {
         try {
-          // 👇 BURASI KRİTİK: Hangi sekmedeysek ona uygun endpoint'e git
           const endpoint = activeTab === 'tracks' 
             ? "http://localhost:5000/api/users/favorites/remove" 
             : "http://localhost:5000/api/users/favorites/remove-movie";
@@ -95,7 +90,6 @@ const Profile = () => {
 
           await axios.post(endpoint, payload);
 
-          // State'den de silelim ki sayfa yenilenmeden kaybolsun
           setUserProfile((prev) => {
             if (activeTab === 'tracks') {
                 return { ...prev, favoriteTracks: prev.favoriteTracks.filter((t) => t._id !== itemId) };
@@ -177,18 +171,43 @@ const Profile = () => {
     }
   };
 
-  // --- HANGİ LİSTEYİ GÖSTERECEĞİZ? ---
+  // --- LİSTELEME VE SIRALAMA MANTIĞI (BURASI GÜNCELLENDİ) ---
   const getItemsToDisplay = () => {
       if (!userProfile) return [];
       const list = activeTab === 'tracks' ? userProfile.favoriteTracks : userProfile.favoriteMovies;
       if (!list) return [];
       
-      // Basit sıralama (Geliştirilebilir)
       let sorted = [...list];
-      if (sortType === 'date_added_newest') {
-          // Sorting ID (MongoID) genelde zamana göredir
-          // sorted.sort(...) 
+
+      // Senin gönderdiğin sıralama mantığını buraya entegre ettim
+      // Hem Müzik hem Film için çalışacak şekilde
+      switch (sortType) {
+        case "date_added_newest":
+          // sortingId (Mongo ID) zamana göre artan bir değerdir
+          sorted.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
+          break;
+        case "date_added_oldest":
+          sorted.sort((a, b) => a.sortingId.toString().localeCompare(b.sortingId.toString()));
+          break;
+        case "popularity_desc":
+          if (activeTab === 'tracks') {
+              sorted.sort((a, b) => b.popularity - a.popularity);
+          } else {
+              // Filmler için popülerlik yerine Puan (Vote Average) kullanıyoruz
+              sorted.sort((a, b) => b.voteAverage - a.voteAverage);
+          }
+          break;
+        case "date_newest":
+          // Yayın tarihi sıralaması
+          sorted.sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
+          break;
+        case "date_oldest":
+          sorted.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+          break;
+        default:
+          break;
       }
+      
       return sorted;
   };
 
@@ -242,9 +261,13 @@ const Profile = () => {
           </h2>
           <div className="flex items-center gap-2 mt-4 md:mt-0">
             <span className="text-sm text-gray-400">Sort By:</span>
+            {/* 👇 SEÇENEKLER GÜNCELLENDİ */}
             <select value={sortType} onChange={handleSortChange} className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm cursor-pointer">
               <option value="date_added_newest">Date Added (Newest)</option>
               <option value="date_added_oldest">Date Added (Oldest)</option>
+              <option value="popularity_desc">{activeTab === 'tracks' ? 'Popularity' : 'Rating'}</option>
+              <option value="date_newest">Release Date (Newest)</option>
+              <option value="date_oldest">Release Date (Oldest)</option>
             </select>
           </div>
         </div>
@@ -259,7 +282,6 @@ const Profile = () => {
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
               >
                 <div className="relative aspect-square">
-                  {/* Resim Kaynağı Dinamik */}
                   <img
                     src={activeTab === 'tracks' ? item.albumCover : item.posterPath}
                     alt={item.title}
@@ -302,14 +324,34 @@ const Profile = () => {
                   <>
                     <p className="text-xl text-indigo-400 mb-6">{selectedItem.artist}</p>
                     <div className="space-y-3 text-gray-300 text-sm mb-8">
-                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedItem.album}</span></div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2">
+                            <span>Album</span> <span className="text-white">{selectedItem.album}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2">
+                            <span>Released</span> <span className="text-white">{selectedItem.releaseDate}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2">
+                            <span>Duration</span> <span className="text-white">{selectedItem.duration} min</span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center">
+                            <span>Popularity</span>
+                            <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500" style={{ width: `${selectedItem.popularity}%` }}></div>
+                            </div>
+                        </div>
                     </div>
                   </>
               ) : (
                   <>
                      <p className="text-sm text-gray-300 mt-2 mb-6 line-clamp-4">{selectedItem.overview}</p>
-                     <div className="flex justify-between border-b border-gray-800 pb-2 mb-4">
-                        <span className="text-gray-400">Release Date</span> <span className="text-white">{selectedItem.releaseDate}</span>
+                     <div className="space-y-3 text-gray-300 text-sm mb-8">
+                        <div className="flex justify-between border-b border-gray-800 pb-2">
+                            <span className="text-gray-400">Release Date</span> <span className="text-white">{selectedItem.releaseDate}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-800 pb-2">
+                            <span className="text-gray-400">Rating</span> <span className="text-yellow-400 font-bold">⭐ {selectedItem.voteAverage?.toFixed(1)}</span>
+                        </div>
                      </div>
                   </>
               )}
