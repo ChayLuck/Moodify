@@ -69,12 +69,19 @@ const Profile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, currentUserId]);
 
+  // --- ACTIVE TAB DEĞİŞTİĞİNDE SORT TYPE'I GÜNCELLE ---
+  useEffect(() => {
+    if (activeTab === 'tracks') {
+      setSortType('relevance');
+    } else {
+      setSortType('date_added_newest');
+    }
+  }, [activeTab]);
+
   // --- SIRALAMA (SORT) ---
   const handleSortChange = (e) => {
     const type = e.target.value;
     setSortType(type);
-    // Sıralama mantığı render sırasında (getItemsToDisplay içinde) yapılabilir
-    // ya da burada state güncellenebilir. Basitlik için render'da bırakıyoruz.
   };
 
   // --- MODAL AÇMA FONKSİYONU (GÜNCELLENDİ) ---
@@ -219,12 +226,40 @@ const Profile = () => {
       const list = activeTab === 'tracks' ? userProfile.favoriteTracks : userProfile.favoriteMovies;
       if (!list) return [];
       
-      // Basit sıralama (Geliştirilebilir)
       let sorted = [...list];
-      if (sortType === 'date_added_newest') {
+      
+      // Tracks için sıralama (Songs.js ile aynı)
+      if (activeTab === 'tracks') {
+        switch (sortType) {
+          case 'popularity_desc':
+            sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+            break;
+          case 'date_newest':
+            sorted.sort((a, b) => {
+              const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+              const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+              return dateB - dateA;
+            });
+            break;
+          case 'date_oldest':
+            sorted.sort((a, b) => {
+              const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+              const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+              return dateA - dateB;
+            });
+            break;
+          case 'relevance':
+          default:
+            // Varsayılan sıralama (eklenme sırasına göre)
+            break;
+        }
+      } else {
+        // Movies için sıralama (varsayılan)
+        if (sortType === 'date_added_newest') {
           // Sorting ID (MongoID) genelde zamana göredir
-          // sorted.sort(...) 
+        }
       }
+      
       return sorted;
   };
 
@@ -279,8 +314,19 @@ const Profile = () => {
           <div className="flex items-center gap-2 mt-4 md:mt-0">
             <span className="text-sm text-gray-400">Sort By:</span>
             <select value={sortType} onChange={handleSortChange} className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm cursor-pointer">
-              <option value="date_added_newest">Date Added (Newest)</option>
-              <option value="date_added_oldest">Date Added (Oldest)</option>
+              {activeTab === 'tracks' ? (
+                <>
+                  <option value="relevance">Recommended</option>
+                  <option value="popularity_desc">Popularity (High to Low)</option>
+                  <option value="date_newest">Release Date (Newest)</option>
+                  <option value="date_oldest">Release Date (Oldest)</option>
+                </>
+              ) : (
+                <>
+                  <option value="date_added_newest">Date Added (Newest)</option>
+                  <option value="date_added_oldest">Date Added (Oldest)</option>
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -324,21 +370,28 @@ const Profile = () => {
       {/* DETAIL MODAL */}
       {selectedItem && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeModal}>
-          <div className={`bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row`} onClick={(e) => e.stopPropagation()}>
+          <div className={`bg-gray-900 rounded-2xl ${activeTab === 'tracks' ? 'max-w-4xl' : 'max-w-5xl'} w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row`} onClick={(e) => e.stopPropagation()}>
             <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
             {modalLoading ? <div className="p-20 w-full text-center text-xl">Loading...</div> : (
               <>
-                <div className={`w-full ${activeTab === 'movies' ? 'md:w-1/3' : 'md:w-1/2'} h-96 md:h-auto relative`}>
+                <div className={`w-full ${activeTab === 'movies' ? 'md:w-1/3' : 'md:w-1/2'} ${activeTab === 'tracks' ? 'h-80' : 'h-96'} md:h-auto relative`}>
                   <img src={activeTab === 'tracks' ? selectedItem.albumCover : (selectedItem.poster || selectedItem.posterPath)} alt={selectedItem.title} className="w-full h-full object-cover" />
                 </div>
-                <div className={`w-full ${activeTab === 'movies' ? 'md:w-2/3' : 'md:w-1/2'} p-8 flex flex-col`}>
+                <div className={`w-full ${activeTab === 'movies' ? 'md:w-2/3' : 'md:w-1/2'} p-8 flex flex-col ${activeTab === 'tracks' ? 'justify-center' : ''}`}>
                   <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
                   
                   {activeTab === 'tracks' ? (
                       <>
                         <p className="text-xl text-indigo-400 mb-6">{selectedItem.artist}</p>
                         <div className="space-y-3 text-gray-300 text-sm mb-8">
-                            <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedItem.album}</span></div>
+                            <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span><span className="text-white">{selectedItem.album}</span></div>
+                            <div className="flex justify-between border-b border-gray-800 pb-2"><span>Release Date</span><span className="text-white">{selectedItem.releaseDate}</span></div>
+                            <div className="flex justify-between items-center">
+                              <span>Popularity</span>
+                              <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-indigo-500" style={{ width: `${selectedItem.popularity || 0}%` }}></div>
+                              </div>
+                            </div>
                         </div>
                       </>
                   ) : (
@@ -388,7 +441,7 @@ const Profile = () => {
                         <button onClick={() => setPlayingTrack(selectedItem._id)} className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg">Play Now</button>
                         <button 
                           onClick={() => handleRemoveFavorite(selectedItem._id, selectedItem.title)} 
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold border border-red-900"
+                          className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
                         >
                           Remove
                         </button>

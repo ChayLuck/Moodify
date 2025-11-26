@@ -250,7 +250,7 @@ const Home = () => {
                     {/* 👇 FİLM FAVORİ BUTONU (Aktif) */}
                     <button 
                         onClick={() => initiateMovieFavorite(selectedMovie)} 
-                        className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black py-3 rounded-lg font-bold shadow-lg"
+                        className="flex-1  bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
                     >
                       ❤️ Favorite
                     </button>
