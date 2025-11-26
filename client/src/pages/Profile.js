@@ -22,7 +22,8 @@ const Profile = () => {
   const [playingTrack, setPlayingTrack] = useState(null);
   
   // HEM FİLM HEM ŞARKI İÇİN ORTAK SEÇİM STATE'İ
-  const [selectedItem, setSelectedItem] = useState(null); 
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false); 
   
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
@@ -76,6 +77,41 @@ const Profile = () => {
     // ya da burada state güncellenebilir. Basitlik için render'da bırakıyoruz.
   };
 
+  // --- MODAL AÇMA FONKSİYONU (GÜNCELLENDİ) ---
+  const openItemModal = async (item) => {
+    setModalLoading(true);
+    setSelectedItem(item);
+    document.body.style.overflow = "hidden";
+    
+    // Eğer film seçildiyse, backend'den tam detayları çek
+    // Backend'den gelen film verisinde _id TMDb ID'sidir
+    if (activeTab === 'movies' && item._id) {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/movies/details/${item._id}`);
+        // Backend'den gelen detayları orijinal item ile birleştir (userMood ve _id'yi koru)
+        const detailedMovie = {
+          ...res.data,
+          userMood: item.userMood,
+          _id: item._id, // Orijinal item'dan _id'yi koru (mood güncelleme ve silme için gerekli)
+          id: res.data.id || item._id // Backend'den gelen id'yi de ekle
+        };
+        setSelectedItem(detailedMovie);
+      } catch (error) {
+        console.error("Movie details error:", error);
+        showToast("error", "Movie details could not be loaded.");
+        // Hata durumunda en azından orijinal item'ı göster
+        setSelectedItem(item);
+      }
+    }
+    
+    setModalLoading(false);
+  };
+
+  const closeModal = () => {
+    setSelectedItem(null);
+    document.body.style.overflow = "auto";
+  };
+
   // --- SİLME FONKSİYONU (GÜNCELLENDİ) ---
   const handleRemoveFavorite = (itemId, itemName) => {
     setRemoveConfirm({
@@ -124,7 +160,7 @@ const Profile = () => {
         "http://localhost:5000/api/users/favorites/update-mood",
         {
           userId: currentUserId,
-          itemId: activeTab === 'tracks' ? itemToEdit._id : itemToEdit.tmdbId,
+          itemId: activeTab === 'tracks' ? itemToEdit._id : itemToEdit._id,
           type: activeTab === 'tracks' ? 'track' : 'movie',
           mood: newMood,
         }
@@ -255,7 +291,7 @@ const Profile = () => {
             {itemsToDisplay.map((item) => (
               <div
                 key={item._id}
-                onClick={() => { setSelectedItem(item); document.body.style.overflow = "hidden"; }}
+                onClick={() => openItemModal(item)}
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
               >
                 <div className="relative aspect-square">
@@ -287,53 +323,91 @@ const Profile = () => {
 
       {/* DETAIL MODAL */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-40 p-4" onClick={() => { setSelectedItem(null); document.body.style.overflow = "auto"; }}>
-          <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => { setSelectedItem(null); document.body.style.overflow = "auto"; }} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeModal}>
+          <div className={`bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row`} onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
+            {modalLoading ? <div className="p-20 w-full text-center text-xl">Loading...</div> : (
+              <>
+                <div className={`w-full ${activeTab === 'movies' ? 'md:w-1/3' : 'md:w-1/2'} h-96 md:h-auto relative`}>
+                  <img src={activeTab === 'tracks' ? selectedItem.albumCover : (selectedItem.poster || selectedItem.posterPath)} alt={selectedItem.title} className="w-full h-full object-cover" />
+                </div>
+                <div className={`w-full ${activeTab === 'movies' ? 'md:w-2/3' : 'md:w-1/2'} p-8 flex flex-col`}>
+                  <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
+                  
+                  {activeTab === 'tracks' ? (
+                      <>
+                        <p className="text-xl text-indigo-400 mb-6">{selectedItem.artist}</p>
+                        <div className="space-y-3 text-gray-300 text-sm mb-8">
+                            <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedItem.album}</span></div>
+                        </div>
+                      </>
+                  ) : (
+                      <>
+                        <div className="flex flex-wrap gap-3 mb-4">
+                          {selectedItem.genres?.map((g) => <span key={g} className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300">{g}</span>)}
+                        </div>
+                        <p className="text-gray-300 leading-relaxed mb-6">{selectedItem.overview}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div>
+                            <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">Director</h4>
+                            <p className="text-gray-300">{selectedItem.director}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">Cast</h4>
+                            <div className="flex flex-col gap-2">
+                              {selectedItem.cast?.map((actor) => (
+                                <div key={actor.name} className="flex items-center gap-3">
+                                  <img src={actor.photo || "https://via.placeholder.com/50"} alt={actor.name} className="w-8 h-8 rounded-full object-cover" />
+                                  <div>
+                                    <p className="text-sm text-white">{actor.name}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                  )}
 
-            <div className="w-full md:w-1/2 h-80 md:h-auto">
-              <img src={activeTab === 'tracks' ? selectedItem.albumCover : selectedItem.posterPath} alt={selectedItem.title} className="w-full h-full object-cover" />
-            </div>
-
-            <div className="w-full md:w-1/2 p-8 flex flex-col">
-              <h2 className="text-3xl font-bold text-white mb-2">{selectedItem.title}</h2>
-              
-              {activeTab === 'tracks' ? (
-                  <>
-                    <p className="text-xl text-indigo-400 mb-6">{selectedItem.artist}</p>
-                    <div className="space-y-3 text-gray-300 text-sm mb-8">
-                        <div className="flex justify-between border-b border-gray-800 pb-2"><span>Album</span> <span className="text-white">{selectedItem.album}</span></div>
+                  {(activeTab === 'movies' || activeTab === 'tracks') && (
+                    <div className="flex justify-between pt-4 items-center mb-6">
+                        <span className="text-gray-300">Mood</span>
+                        <button onClick={() => { 
+                          setItemToEdit(selectedItem); 
+                          setShowMoodModal(true); 
+                        }} className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${getMoodColor(selectedItem.userMood)}`}>
+                          {selectedItem.userMood} 
+                        </button>
                     </div>
-                  </>
-              ) : (
-                  <>
-                     <p className="text-sm text-gray-300 mt-2 mb-6 line-clamp-4">{selectedItem.overview}</p>
-                     <div className="flex justify-between border-b border-gray-800 pb-2 mb-4">
-                        <span className="text-gray-400">Release Date</span> <span className="text-white">{selectedItem.releaseDate}</span>
-                     </div>
-                  </>
-              )}
-
-              <div className="flex justify-between pt-4 items-center mb-8">
-                  <span>Mood</span>
-                  <button onClick={() => { setItemToEdit(selectedItem); setShowMoodModal(true); }} className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${getMoodColor(selectedItem.userMood)}`}>
-                    {selectedItem.userMood} 
-                  </button>
-              </div>
-
-              <div className="flex gap-4 mt-auto">
-                {activeTab === 'tracks' && (
-                    <button onClick={() => setPlayingTrack(selectedItem._id)} className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg">Play Now</button>
-                )}
-                {/* REMOVE BUTONU */}
-                <button 
-                    onClick={() => handleRemoveFavorite(selectedItem._id, selectedItem.title)} 
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold border border-red-900"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
+                  )}
+                  
+                  <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
+                    {activeTab === 'tracks' ? (
+                      <>
+                        <button onClick={() => setPlayingTrack(selectedItem._id)} className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg">Play Now</button>
+                        <button 
+                          onClick={() => handleRemoveFavorite(selectedItem._id, selectedItem.title)} 
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold border border-red-900"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={closeModal} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold">Close</button>
+                        <button 
+                          onClick={() => handleRemoveFavorite(selectedItem._id, selectedItem.title)} 
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-lg"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
