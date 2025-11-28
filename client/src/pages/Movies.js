@@ -16,6 +16,9 @@ const Movies = () => {
   // --- MODAL STATE ---
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
+  const [trailerUrl, setTrailerUrl] = useState(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // --- SEARCH FUNCTION ---
   const handleSearch = async (e) => {
@@ -89,6 +92,27 @@ const Movies = () => {
       setModalLoading(false);
     }
   };
+  const fetchTrailer = async (movieId) => {
+    setTrailerLoading(true);
+    setTrailerUrl(null);
+
+  try {
+    const res = await axios.get(
+      `http://localhost:5000/api/movies/trailer/${movieId}`
+    );
+
+    if (!res.data.trailer) {
+      showToast("info", "Trailer bulunamadı 🎬❌");
+    } else {
+      setTrailerUrl(res.data.trailer);
+    }
+  } catch (error) {
+    console.error("Trailer Fetch Error:", error);
+    showToast("error", "Trailer yüklenirken hata oluştu.");
+  } finally {
+    setTrailerLoading(false);
+  }
+};
 
   const closeModal = () => {
     setSelectedMovie(null);
@@ -323,12 +347,6 @@ const Movies = () => {
                   {/* Buttons */}
                   <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
                     <button
-                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition border border-gray-600"
-                      onClick={closeModal}
-                    >
-                      Close
-                    </button>
-                    <button
                       className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center gap-2"
                       onClick={() =>
                         showToast(
@@ -339,6 +357,16 @@ const Movies = () => {
                     >
                       Add to Favorites
                     </button>
+                    <button
+                      className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center"
+                      onClick={() => {
+                        fetchTrailer(selectedMovie.id);
+                        setShowTrailerModal(true);
+                        
+                      }}
+                    >
+                      Watch Trailer
+                    </button>
                   </div>
                 </div>
               </>
@@ -346,8 +374,41 @@ const Movies = () => {
           </div>
         </div>
       )}
-    </div>
+
+      {/* --- TRAILER MODAL --- */}
+      {showTrailerModal && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowTrailerModal(false)}
+        >
+          <div
+            className="bg-gray-900 rounded-xl w-full max-w-4xl p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowTrailerModal(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-3xl"
+            >
+              &times;
+            </button>
+
+            {!trailerUrl ? (
+              <p className="text-center text-gray-400 py-10 text-xl">
+                Trailer loading 🎬
+              </p>
+            ) : (
+              <iframe
+                src={trailerUrl}
+                className="w-full h-[400px] rounded-lg border border-gray-700"
+                allow="autoplay; fullscreen"
+              ></iframe>
+            )}
+          </div>
+        </div>
+      )}
+    </div>  
   );
 };
 
 export default Movies;
+ 

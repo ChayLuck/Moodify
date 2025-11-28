@@ -76,5 +76,33 @@ const getMovieDetails = async (req, res) => {
         res.status(500).json({ message: "Details failed." });
     }
 };
+const getMovieTrailer = async (req, res) => {
+    const movieId = req.params.id;
 
-module.exports = { searchMovies, getMovieDetails };
+    try {
+        const apiKey = process.env.TMDB_API_KEY;
+
+        const url = `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${apiKey}&language=en-US`;
+
+        const response = await axios.get(url);
+        const videos = response.data.results;
+
+        const trailer = videos.find(
+            v => v.type === "Trailer" && v.site === "YouTube"
+        );
+
+        if (!trailer) {
+            return res.json({ trailer: null });
+        }
+
+        return res.json({
+            trailer: `https://www.youtube.com/embed/${trailer.key}`
+        });
+
+    } catch (error) {
+        console.error("TMDB Trailer Error:", error.message);
+        res.status(500).json({ message: "Trailer fetch failed." });
+    }
+};
+
+module.exports = { searchMovies, getMovieDetails, getMovieTrailer };   // <-- BURAYA EKLE };  
