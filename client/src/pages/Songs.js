@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useToast } from "../context/ToastContext";
 
@@ -7,8 +7,11 @@ const Songs = () => {
   const { showToast } = useToast(); // ✅ GLOBAL TOAST
 
   const [query, setQuery] = useState('');
+  const [searchedQuery, setSearchedQuery] = useState('');
   const [tracks, setTracks] = useState([]);
+  const [newReleases, setNewReleases] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searched, setSearched] = useState(false);
 
   const [sortType, setSortType] = useState('relevance');
@@ -29,6 +32,21 @@ const Songs = () => {
     { name: 'Romantic', emoji: '❤️', color: 'bg-pink-500' }
   ];
 
+  // --- FETCH NEW RELEASES ON MOUNT ---
+  useEffect(() => {
+    const fetchNewReleases = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/content/new-releases");
+        setNewReleases(res.data);
+        setInitialLoading(false);
+      } catch (error) {
+        console.error("New Releases Error:", error);
+        setInitialLoading(false);
+      }
+    };
+    fetchNewReleases();
+  }, []);
+
   // --- SEARCH ---
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -38,6 +56,7 @@ const Songs = () => {
     setTracks([]);
     setSearched(false);
     setSortType('relevance');
+    setSearchedQuery(query); // Arama yapıldığında query'yi searchedQuery'ye kaydet
 
     try {
       const res = await axios.get(`http://localhost:5000/api/songs/search?q=${query}`);
@@ -133,7 +152,7 @@ const Songs = () => {
       <div className="max-w-6xl mx-auto">
 
         <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
-          🎵 <span className="text-white">Discover Music</span>
+          🎵 <span className="text-white">Discover Songs</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -143,7 +162,15 @@ const Songs = () => {
             placeholder="Search for a song..."
             className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              // Eğer input boşsa, arama sonuçlarını temizle ve New Releases'ı göster
+              if (e.target.value === '') {
+                setTracks([]);
+                setSearched(false);
+                setSearchedQuery('');
+              }
+            }}
           />
           <button
             type="submit"
@@ -154,12 +181,44 @@ const Songs = () => {
           </button>
         </form>
 
+        {/* NEW RELEASES SECTION (when not searched) */}
+        {!searched && (
+          <>
+            {initialLoading ? (
+              <p className="text-center text-gray-500 py-20">Loading new releases...</p>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold mb-8 border-l-4 border-green-500 pl-4 flex items-center gap-2 text-green-500">
+                  🎵 New Releases
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
+                  {newReleases.map((song) => (
+                    <div
+                      key={song.id}
+                      onClick={() => fetchDetailsAndOpen(song.id)}
+                      className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <img src={song.image} alt={song.name} className="w-full h-full object-cover transition duration-300 group-hover:opacity-80" />
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold truncate text-lg text-white group-hover:text-green-400 transition">{song.name}</h3>
+                        <p className="text-gray-400 text-sm truncate">{song.artist}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
         {/* RESULT & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
 
             <p className="text-gray-400 mb-2 md:mb-0">
-              Found <span className="text-indigo-400 font-bold">{tracks.length}</span> songs.
+              Found <span className="text-indigo-400 font-bold">{tracks.length}</span> results for "{searchedQuery}"
             </p>
 
             <div className="flex items-center gap-2">
@@ -179,28 +238,28 @@ const Songs = () => {
           </div>
         )}
 
-        {/* TRACK GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          {tracks.map((track) => (
-            <div
-              key={track.id}
-              onClick={() => fetchDetailsAndOpen(track.id)}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
-            >
-              <div className="relative aspect-square overflow-hidden">
-                <img src={track.image} alt={track.name} className="w-full h-full object-cover transition duration-500 " />
-                {/* <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                </div> */}
-              </div>
+        {/* TRACK GRID (Search Results) */}
+        {searched && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {tracks.map((track) => (
+              <div
+                key={track.id}
+                onClick={() => fetchDetailsAndOpen(track.id)}
+                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+              >
+                <div className="relative aspect-square overflow-hidden">
+                  <img src={track.image} alt={track.name} className="w-full h-full object-cover transition duration-500 " />
+                </div>
 
-              <div className="p-3">
-                <h3 className="font-bold text-white truncate group-hover:text-indigo-400">{track.name}</h3>
-                <p className="text-gray-400 text-xs truncate">{track.artist}</p>
-              </div>
+                <div className="p-3">
+                  <h3 className="font-bold text-white truncate group-hover:text-indigo-400">{track.name}</h3>
+                  <p className="text-gray-400 text-xs truncate">{track.artist}</p>
+                </div>
 
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
 

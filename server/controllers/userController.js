@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Track = require('../models/Track');
 const qs = require('qs');
 
-// --- 1. TOKEN ALMA ---
+// --- 1. TOKEN ALMA (SPOTIFY) ---
 const getSpotifyToken = async () => {
     const url = 'https://accounts.spotify.com/api/token'; 
     const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
@@ -18,7 +18,7 @@ const getSpotifyToken = async () => {
     }
 };
 
-// --- 2. ARAMA ---
+// --- 2. MÜZİK ARAMA (SPOTIFY) ---
 const searchSpotify = async (req, res) => {
     const query = req.query.q;
     if (!query) return res.status(400).json({ message: "Required Field Missing" });
@@ -42,7 +42,36 @@ const searchSpotify = async (req, res) => {
     }
 };
 
-// --- 3. FAVORİ EKLEME (SADE VE TEMİZ) ---
+// --- 2.5 FİLM ARAMA (TMDb - YENİ) ---
+const searchMovies = async (req, res) => {
+    const query = req.query.q;
+    if (!query) return res.status(400).json({ message: "Search query missing" });
+
+    try {
+        const apiKey = process.env.TMDB_API_KEY;
+        const url = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(query)}`;
+        
+        const response = await axios.get(url);
+        
+        // Gelen veriyi frontend formatına uygun hale getirelim
+        const movies = response.data.results
+            .filter(movie => movie.poster_path) // Posteri olmayanları eleyelim
+            .map(movie => ({
+                id: movie.id, // TMDb ID
+                title: movie.title,
+                releaseDate: movie.release_date,
+                posterPath: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                voteAverage: movie.vote_average
+            }));
+
+        res.json(movies);
+    } catch (error) {
+        console.error("Movie Search Error:", error.message);
+        res.status(500).json({ message: "Movie search failed" });
+    }
+};
+
+// --- 3. FAVORİ ŞARKI EKLEME ---
 const addFavoriteTrack = async (req, res) => {
     let { userId, track, mood } = req.body; 
 
@@ -51,14 +80,11 @@ const addFavoriteTrack = async (req, res) => {
         
         // --- ALBÜM KONTROLÜ ---
         try {
-            // Bu ID bir albüm mü diye bakıyoruz
             const checkAlbumUrl = `https://api.spotify.com/v1/albums/${track.id}/tracks?limit=1`;
             const albumRes = await axios.get(checkAlbumUrl, { headers: { 'Authorization': 'Bearer ' + token } });
 
             if (albumRes.data && albumRes.data.items && albumRes.data.items.length > 0) {
                 const firstTrack = albumRes.data.items[0];
-                console.log(`💿 Album -> Song Conversion: "${track.name}" -> "${firstTrack.name}"`);
-                
                 track = {
                     id: firstTrack.id,
                     name: firstTrack.name,
@@ -70,8 +96,8 @@ const addFavoriteTrack = async (req, res) => {
             }
         } catch (err) { /* Albüm değilse devam et */ }
 
-        // --- VERİTABANINA KAYIT (Features YOK) ---
-        const dbTrack = await Track.findOneAndUpdate(
+        // --- TRACK MODELİNE KAYIT ---
+        await Track.findOneAndUpdate(
             { spotifyId: track.id }, 
             {
                 spotifyId: track.id,
@@ -79,8 +105,6 @@ const addFavoriteTrack = async (req, res) => {
                 artist: track.artist,
                 albumCover: track.image,
                 previewUrl: track.preview_url,
-                // artistGenres ileride "Sad" kelimesini filtrelemek için lazım olabilir
-                // ama şimdilik boş geçiyoruz, gerekirse ekleriz.
                 artistGenres: [] 
             },
             { upsert: true, new: true }
@@ -104,7 +128,33 @@ const addFavoriteTrack = async (req, res) => {
     }
 };
 
-// --- 4. SİLME ---
+// --- 3.5 FAVORİ FİLM EKLEME (YENİ) ---
+const addFavoriteMovie = async (req, res) => {
+    const { userId, movie, mood } = req.body; 
+    // movie objesi: { id, title, posterPath, ... } içermeli
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const exists = user.favoriteMovies.some(m => m.tmdbId === movie.id.toString());
+
+        if (!exists) {
+            // Şemaya uygun şekilde ekliyoruz
+            user.favoriteMovies.push({ tmdbId: movie.id.toString(), mood: mood });
+            await user.save();
+            res.json({ message: `"${movie.title}" added to movies! 🎬` });
+        } else {
+            res.status(400).json({ message: "Movie already in favorites." });
+        }
+
+    } catch (error) {
+        console.error("Add Movie Error:", error.message);
+        res.status(500).json({ message: "Could not add movie" });
+    }
+};
+
+// --- 4. FAVORİ SİLME (ŞARKI) ---
 const removeFavoriteTrack = async (req, res) => {
     const { userId, trackId } = req.body;
     try {
@@ -117,70 +167,132 @@ const removeFavoriteTrack = async (req, res) => {
     }
 };
 
+// --- 4.5 FAVORİ SİLME (FİLM - YENİ) ---
+const removeFavoriteMovie = async (req, res) => {
+    const { userId, movieId } = req.body;
+    try {
+        const user = await User.findById(userId);
+        // tmdbId string olduğu için string karşılaştırması yapıyoruz
+        user.favoriteMovies = user.favoriteMovies.filter(m => m.tmdbId !== movieId.toString());
+        await user.save();
+        res.json({ message: "Movie removed." });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error removing movie" });
+    }
+};
+
 // --- 5. MOD GÜNCELLEME ---
 const updateFavoriteMood = async (req, res) => {
-    const { userId, trackId, mood } = req.body;
+    const { userId, itemId, type, mood } = req.body; // type: 'track' veya 'movie'
+    
     try {
-        await User.updateOne(
-            { _id: userId, "favoriteTracks.spotifyId": trackId },
-            { $set: { "favoriteTracks.$.mood": mood } }
-        );
+        if (type === 'movie') {
+             await User.updateOne(
+                { _id: userId, "favoriteMovies.tmdbId": itemId },
+                { $set: { "favoriteMovies.$.mood": mood } }
+            );
+        } else {
+            // Default track kabul edelim veya 'track' ise
+            await User.updateOne(
+                { _id: userId, "favoriteTracks.spotifyId": itemId },
+                { $set: { "favoriteTracks.$.mood": mood } }
+            );
+        }
         res.json({ message: "Updated" });
     } catch (error) {
         res.status(500).json({ message: "Error" });
     }
 };
 
-// --- 6. PROFİL GETİRME ---
+// --- 6. PROFİL GETİRME (GÜNCELLENDİ: ŞARKI + FİLM) ---
 const getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (!user) return res.status(404).json({ message: "No User" });
 
-        if (user.favoriteTracks.length === 0) {
-            return res.json({ ...user._doc, favoriteTracks: [] });
+        // --- A. ŞARKILARI ÇEKME ---
+        let detailedTracks = [];
+        if (user.favoriteTracks.length > 0) {
+            try {
+                const token = await getSpotifyToken();
+                const ids = user.favoriteTracks.map(t => t.spotifyId);
+                const idsString = ids.slice(0, 50).join(','); 
+                const spotifyUrl = `https://api.spotify.com/v1/tracks?ids=${idsString}`;
+                
+                const spotifyRes = await axios.get(spotifyUrl, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                detailedTracks = spotifyRes.data.tracks
+                    .filter(t => t !== null)
+                    .map(t => {
+                        const localData = user.favoriteTracks.find(local => local.spotifyId === t.id);
+                        return {
+                            _id: t.id, 
+                            sortingId: localData ? localData._id : '', 
+                            title: t.name,
+                            artist: t.artists[0].name,
+                            album: t.album.name, 
+                            albumCover: t.album.images[0]?.url,
+                            previewUrl: t.preview_url,
+                            releaseDate: t.album.release_date, 
+                            popularity: t.popularity, 
+                            duration: (t.duration_ms / 60000).toFixed(2), 
+                            userMood: localData ? localData.mood : '?'
+                        };
+                    });
+                
+                // Sıralama
+                detailedTracks.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
+            } catch (err) {
+                console.error("Spotify Fetch Error:", err.message);
+            }
         }
 
-        const token = await getSpotifyToken();
-        
-        // ID'leri al
-        const ids = user.favoriteTracks.map(t => t.spotifyId);
-        const idsString = ids.slice(0, 50).join(','); 
+        // --- B. FİLMLERİ ÇEKME (YENİ KISIM) ---
+        let detailedMovies = [];
+        if (user.favoriteMovies && user.favoriteMovies.length > 0) {
+            try {
+                const apiKey = process.env.TMDB_API_KEY;
+                // TMDb'de toplu ID sorgusu olmadığı için Promise.all ile paralel istek atıyoruz
+                const moviePromises = user.favoriteMovies.map(async (favMovie) => {
+                    try {
+                        const movieRes = await axios.get(`https://api.themoviedb.org/3/movie/${favMovie.tmdbId}?api_key=${apiKey}`);
+                        const m = movieRes.data;
+                        return {
+                            _id: m.id, // TMDb ID
+                            sortingId: favMovie._id, // Mongo ID (sıralama için)
+                            title: m.title,
+                            overview: m.overview,
+                            posterPath: `https://image.tmdb.org/t/p/w500${m.poster_path}`,
+                            releaseDate: m.release_date,
+                            voteAverage: m.vote_average,
+                            userMood: favMovie.mood
+                        };
+                    } catch (e) {
+                        console.error(`Movie fetch error for ID ${favMovie.tmdbId}:`, e.message);
+                        return null;
+                    }
+                });
 
-        // RESMİ TRACKS ADRESİ
-        const spotifyUrl = `https://api.spotify.com/v1/tracks?ids=${idsString}`;
-        
-        const spotifyRes = await axios.get(spotifyUrl, {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        // Veriyi Zenginleştir
-        const detailedTracks = spotifyRes.data.tracks
-            .filter(t => t !== null)
-            .map(t => {
-                // Bu şarkının veritabanındaki kaydını bul (Mood ve ID için)
-                const localData = user.favoriteTracks.find(local => local.spotifyId === t.id);
+                const results = await Promise.all(moviePromises);
+                detailedMovies = results.filter(m => m !== null);
                 
-                return {
-                    _id: t.id, // Spotify ID
-                    sortingId: localData ? localData._id : '', // 👇 SIRALAMA İÇİN GEREKLİ (Mongo ID)
-                    title: t.name,
-                    artist: t.artists[0].name,
-                    album: t.album.name, // Detay için
-                    albumCover: t.album.images[0]?.url,
-                    previewUrl: t.preview_url,
-                    releaseDate: t.album.release_date, // Detay için
-                    popularity: t.popularity, // 👇 POPÜLERLİK ÇUBUĞU İÇİN
-                    duration: (t.duration_ms / 60000).toFixed(2), // Detay için
-                    userMood: localData ? localData.mood : '?'
-                };
-            });
+                // Filmleri de eklenme tarihine göre sıralayalım
+                detailedMovies.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
 
-        // Varsayılan olarak eklenme sırasına göre (En Yeni En Üstte) gönderelim
-        // Mongo ID'leri zamana göre sıralanabilir.
-        detailedTracks.sort((a, b) => b.sortingId.toString().localeCompare(a.sortingId.toString()));
+            } catch (err) {
+                console.error("TMDb Fetch Error:", err.message);
+            }
+        }
 
-        res.json({ ...user._doc, favoriteTracks: detailedTracks });
+        // Tüm veriyi döndür
+        res.json({ 
+            ...user._doc, 
+            favoriteTracks: detailedTracks,
+            favoriteMovies: detailedMovies 
+        });
 
     } catch (error) {
         console.error("Profile Error:", error.message);
@@ -192,19 +304,22 @@ const getUserProfile = async (req, res) => {
 const updateUserIcon = async (req, res) => {
   try {
     const { userId, icon } = req.body;
-
-    if (!userId || !icon)
-      return res.status(400).json({ message: "Missing data" });
-
+    if (!userId || !icon) return res.status(400).json({ message: "Missing data" });
     await User.findByIdAndUpdate(userId, { profileIcon: icon });
-
     res.json({ success: true, icon });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
-
-module.exports = { searchSpotify, addFavoriteTrack, getUserProfile, removeFavoriteTrack, updateFavoriteMood, updateUserIcon };
+module.exports = { 
+    searchSpotify, 
+    searchMovies, // Yeni
+    addFavoriteTrack, 
+    addFavoriteMovie, // Yeni
+    getUserProfile, 
+    removeFavoriteTrack, 
+    removeFavoriteMovie, // Yeni
+    updateFavoriteMood, 
+    updateUserIcon 
+};
