@@ -20,13 +20,15 @@ const Movies = () => {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [trailerUrl, setTrailerUrl] = useState(null);
-  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [setTrailerLoading] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [movieToFavorite, setMovieToFavorite] = useState(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+  // ✅ user + userId
   const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user ? user._id : null;
 
   const MOODS = [
     { name: "Happy", emoji: "😊", color: "bg-yellow-500" },
@@ -36,10 +38,10 @@ const Movies = () => {
     { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
   ];
 
-  // ⭐ ADDED: FAVORITE MOVIES STATE
+  // ⭐ FAVORITE MOVIES STATE
   const [favoriteMovies, setFavoriteMovies] = useState([]);
 
-  // ⭐ ADDED: MOOD BADGE RENGİ
+  // ⭐ MOOD BADGE RENGİ
   const getMoodColor = (moodName) => {
     const found = MOODS.find((m) => m.name === moodName);
     return found ? found.color : "bg-gray-700";
@@ -60,14 +62,14 @@ const Movies = () => {
     fetchTrendingMovies();
   }, []);
 
-  // ⭐ ADDED: KULLANICININ FAVORİ FİLMLERİNİ ÇEK
+  // ⭐ KULLANICININ FAVORİ FİLMLERİNİ ÇEK (user yerine userId dependency!)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const fetchFavorites = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/users/profile/${user._id}`
+          `http://localhost:5000/api/users/profile/${userId}`
         );
         setFavoriteMovies(res.data.favoriteMovies || []);
       } catch (error) {
@@ -76,7 +78,7 @@ const Movies = () => {
     };
 
     fetchFavorites();
-  }, [user]);
+  }, [userId]);
 
   // --- SEARCH ---
   const handleSearch = async (e) => {
@@ -86,7 +88,7 @@ const Movies = () => {
     setMovies([]);
     setSearched(false);
     setSortType("relevance");
-    setSearchedQuery(query); // Arama yapıldığında query'yi searchedQuery'ye kaydet
+    setSearchedQuery(query);
     try {
       const res = await axios.get(`http://localhost:5000/api/movies/search?q=${query}`);
       setMovies(res.data);
@@ -212,7 +214,6 @@ const Movies = () => {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              // Eğer input boşsa, arama sonuçlarını temizle ve Trending Movies'ı göster
               if (e.target.value === "") {
                 setMovies([]);
                 setSearched(false);
@@ -232,7 +233,7 @@ const Movies = () => {
         {/* FAVORITES + TRENDING MOVIES SECTION (when not searched) */}
         {!searched && (
           <>
-            {/* ⭐ ADDED: FAVORITE MOVIES SECTION */}
+            {/* FAVORITE MOVIES SECTION */}
             {user && favoriteMovies.length > 0 && (
               <>
                 <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
@@ -524,6 +525,7 @@ const Movies = () => {
             ) : (
               <iframe
                 src={trailerUrl}
+                title="Trailer"
                 className="w-full h-[400px] rounded-lg border border-gray-700"
                 allow="autoplay; fullscreen"
               ></iframe>

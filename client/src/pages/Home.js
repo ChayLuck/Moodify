@@ -25,7 +25,7 @@ const Home = () => {
 
   // --- TRAILER STATES ---
   const [trailerUrl, setTrailerUrl] = useState(null);
-  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [setTrailerLoading] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // Login gerekli uyarısı için modal
@@ -41,6 +41,9 @@ const Home = () => {
     { name: "Chill", emoji: "🍃", color: "bg-green-500" },
     { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
   ];
+
+  // ⭐ TRACK DETAILS CACHE
+  const [trackDetailsCache, setTrackDetailsCache] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +69,7 @@ const Home = () => {
 
   // --- MODAL AÇMA FONKSİYONLARI ---
   const openMovieModal = async (movieId) => {
+    if (modalLoading) return;
     setModalLoading(true);
     setSelectedMovie({ id: movieId });
     document.body.style.overflow = "hidden";
@@ -103,21 +107,50 @@ const Home = () => {
     }
   };
 
-  // --- ŞARKI DETAY MODALI ---
-  const openTrackModal = async (trackId) => {
-    setModalLoading(true);
-    setSelectedTrack({ id: trackId });
+  // --- ŞARKI DETAY MODALI (OPTIMISTIC + CACHE) ---
+  const openTrackModal = async (track) => {
     document.body.style.overflow = "hidden";
+
+    // 1) Cache'te varsa direkt onu göster
+    const cached = trackDetailsCache[track.id];
+    if (cached) {
+      setSelectedTrack(cached);
+      setModalLoading(false);
+      return;
+    }
+
+    // 2) Optimistic UI: Karttaki verilerle modalı hemen doldur
+    setSelectedTrack({
+      playableId: track.id,
+      id: track.id,
+      name: track.name,
+      artist: track.artist,
+      image: track.image,
+      album: "Loading...",
+      releaseDate: "",
+      popularity: 0,
+    });
+
+    setModalLoading(true);
+
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/songs/details/${trackId}`
+        `http://localhost:5000/api/songs/details/${track.id}`
       );
+
       setSelectedTrack(res.data);
+
+      // 3) Sonucu cache'e koy
+      setTrackDetailsCache((prev) => ({
+        ...prev,
+        [track.id]: res.data,
+      }));
     } catch (error) {
       console.error(error);
       showToast("error", "Track details could not be loaded.");
+    } finally {
+      setModalLoading(false);
     }
-    setModalLoading(false);
   };
 
   const closeModal = () => {
@@ -235,7 +268,7 @@ const Home = () => {
             {movies.map((movie) => (
               <div
                 key={movie.id}
-                onClick={() => openMovieModal(movie.id)}
+                onClick={() => !modalLoading && openMovieModal(movie.id)}
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer"
               >
                 <div className="relative">
@@ -271,7 +304,7 @@ const Home = () => {
             {songs.map((song) => (
               <div
                 key={song.id}
-                onClick={() => openTrackModal(song.id)}
+                onClick={() => !modalLoading && openTrackModal(song)}
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer"
               >
                 <div className="relative">
@@ -340,7 +373,6 @@ const Home = () => {
                     {selectedMovie.overview}
                   </p>
 
-                  {/* ... Cast & Director bölümleri ... */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
@@ -366,7 +398,9 @@ const Home = () => {
                               className="w-8 h-8 rounded-full object-cover"
                             />
                             <div>
-                              <p className="text-sm text-white">{actor.name}</p>
+                              <p className="text-sm text-white">
+                                {actor.name}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -375,7 +409,6 @@ const Home = () => {
                   </div>
 
                   <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
-                    {/* 👇 FİLM FAVORİ BUTONU (Aktif) */}
                     <button
                       onClick={() => {
                         fetchTrailer(selectedMovie.id);
@@ -387,7 +420,7 @@ const Home = () => {
                     </button>
                     <button
                       onClick={() => initiateMovieFavorite(selectedMovie)}
-                      className="flex-1  bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
+                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
                     >
                       ❤️ Favorite
                     </button>
@@ -398,6 +431,7 @@ const Home = () => {
           </div>
         </div>
       )}
+
       {/* --- TRAILER MODAL --- */}
       {showTrailerModal && (
         <div
@@ -422,6 +456,7 @@ const Home = () => {
             ) : (
               <iframe
                 src={trailerUrl}
+                title="Trailer"
                 className="w-full h-[400px] rounded-lg border border-gray-700"
                 allow="autoplay; fullscreen"
               ></iframe>
@@ -488,7 +523,6 @@ const Home = () => {
                 >
                   Play Now
                 </button>
-                {/* 👇 ŞARKI FAVORİ BUTONU */}
                 <button
                   onClick={() => initiateTrackFavorite(selectedTrack)}
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"

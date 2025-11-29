@@ -22,7 +22,9 @@ const Songs = () => {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [trackToFavorite, setTrackToFavorite] = useState(null);
 
+  // ✅ user + primitive userId
   const user = JSON.parse(localStorage.getItem('user'));
+  const userId = user ? user._id : null;
 
   const MOODS = [
     { name: 'Happy', emoji: '😊', color: 'bg-yellow-500' },
@@ -32,10 +34,10 @@ const Songs = () => {
     { name: 'Romantic', emoji: '❤️', color: 'bg-pink-500' }
   ];
 
-  // ⭐ ADDED: FAVORITE TRACKS STATE
+  // ⭐ FAVORITE TRACKS STATE
   const [favoriteTracks, setFavoriteTracks] = useState([]);
 
-  // ⭐ ADDED: MOOD BADGE RENGİ
+  // ⭐ MOOD BADGE RENGİ
   const getMoodColor = (moodName) => {
     const found = MOODS.find((m) => m.name === moodName);
     return found ? found.color : 'bg-gray-700';
@@ -56,14 +58,14 @@ const Songs = () => {
     fetchNewReleases();
   }, []);
 
-  // ⭐ ADDED: KULLANICININ FAVORİ ŞARKILARINI ÇEK
+  // ⭐ KULLANICININ FAVORİ ŞARKILARINI ÇEK (user yerine userId dependency!)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const fetchFavorites = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/users/profile/${user._id}`
+          `http://localhost:5000/api/users/profile/${userId}`
         );
         setFavoriteTracks(res.data.favoriteTracks || []);
       } catch (error) {
@@ -72,7 +74,7 @@ const Songs = () => {
     };
 
     fetchFavorites();
-  }, [user]);
+  }, [userId]);
 
   // --- SEARCH ---
   const handleSearch = async (e) => {
@@ -83,7 +85,7 @@ const Songs = () => {
     setTracks([]);
     setSearched(false);
     setSortType('relevance');
-    setSearchedQuery(query); // Arama yapıldığında query'yi searchedQuery'ye kaydet
+    setSearchedQuery(query);
 
     try {
       const res = await axios.get(`http://localhost:5000/api/songs/search?q=${query}`);
@@ -129,6 +131,7 @@ const Songs = () => {
       const res = await axios.get(`http://localhost:5000/api/songs/details/${trackId}`);
       setSelectedTrack(res.data);
     } catch (error) {
+      console.error("Details Error:", error);
       showToast("error", "Track details could not be loaded.");
     } finally {
       setModalLoading(false);
@@ -191,7 +194,6 @@ const Songs = () => {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              // Eğer input boşsa, arama sonuçlarını temizle ve New Releases'ı göster
               if (e.target.value === '') {
                 setTracks([]);
                 setSearched(false);
@@ -211,7 +213,7 @@ const Songs = () => {
         {/* NEW RELEASES + FAVORITES SECTION (when not searched) */}
         {!searched && (
           <>
-            {/* ⭐ ADDED: FAVORITE SONGS SECTION */}
+            {/* FAVORITE SONGS SECTION */}
             {user && favoriteTracks.length > 0 && (
               <>
                 <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
