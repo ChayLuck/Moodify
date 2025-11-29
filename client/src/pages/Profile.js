@@ -448,7 +448,6 @@ const Profile = () => {
                       </>
                     ) : (
                       <>
-                        <button onClick={closeModal} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold">Close</button>
                         <button 
                           onClick={() => handleRemoveFavorite(selectedItem._id, selectedItem.title)} 
                           className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-lg"
