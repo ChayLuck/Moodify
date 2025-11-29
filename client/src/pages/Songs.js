@@ -32,6 +32,15 @@ const Songs = () => {
     { name: 'Romantic', emoji: '❤️', color: 'bg-pink-500' }
   ];
 
+  // ⭐ ADDED: FAVORITE TRACKS STATE
+  const [favoriteTracks, setFavoriteTracks] = useState([]);
+
+  // ⭐ ADDED: MOOD BADGE RENGİ
+  const getMoodColor = (moodName) => {
+    const found = MOODS.find((m) => m.name === moodName);
+    return found ? found.color : 'bg-gray-700';
+  };
+
   // --- FETCH NEW RELEASES ON MOUNT ---
   useEffect(() => {
     const fetchNewReleases = async () => {
@@ -46,6 +55,24 @@ const Songs = () => {
     };
     fetchNewReleases();
   }, []);
+
+  // ⭐ ADDED: KULLANICININ FAVORİ ŞARKILARINI ÇEK
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFavorites = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/users/profile/${user._id}`
+        );
+        setFavoriteTracks(res.data.favoriteTracks || []);
+      } catch (error) {
+        console.error("Favorite tracks fetch error:", error);
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
 
   // --- SEARCH ---
   const handleSearch = async (e) => {
@@ -181,15 +208,58 @@ const Songs = () => {
           </button>
         </form>
 
-        {/* NEW RELEASES SECTION (when not searched) */}
+        {/* NEW RELEASES + FAVORITES SECTION (when not searched) */}
         {!searched && (
           <>
+            {/* ⭐ ADDED: FAVORITE SONGS SECTION */}
+            {user && favoriteTracks.length > 0 && (
+              <>
+                <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
+                  Your Favorite Songs
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
+                  {favoriteTracks.map((fav) => (
+                    <div
+                      key={fav._id}
+                      onClick={() => fetchDetailsAndOpen(fav._id)} // _id = Spotify track id
+                      className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
+                    >
+                      <div className="relative aspect-square overflow-hidden">
+                        <img
+                          src={fav.albumCover}
+                          alt={fav.title}
+                          className="w-full h-full object-cover transition duration-300 group-hover:opacity-80"
+                        />
+                        {fav.userMood && (
+                          <span
+                            className={`absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-bold shadow-md ${getMoodColor(
+                              fav.userMood
+                            )}`}
+                          >
+                            {fav.userMood}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold truncate text-lg text-white group-hover:text-indigo-400 transition">
+                          {fav.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm truncate">
+                          {fav.artist}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {initialLoading ? (
               <p className="text-center text-gray-500 py-20">Loading new releases...</p>
             ) : (
               <>
                 <h2 className="text-3xl font-bold mb-8 border-l-4 border-green-500 pl-4 flex items-center gap-2 text-green-500">
-                  🎵 New Releases
+                  New Releases
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
                   {newReleases.map((song) => (
@@ -263,7 +333,6 @@ const Songs = () => {
 
       </div>
 
-
       {/* DETAIL MODAL */}
       {selectedTrack && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-40 p-4" onClick={closeModal}>
@@ -324,7 +393,6 @@ const Songs = () => {
           </div>
         </div>
       )}
-
 
       {/* MOOD MODAL */}
       {showMoodModal && (

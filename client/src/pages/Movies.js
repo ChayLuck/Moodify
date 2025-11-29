@@ -36,6 +36,15 @@ const Movies = () => {
     { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
   ];
 
+  // ⭐ ADDED: FAVORITE MOVIES STATE
+  const [favoriteMovies, setFavoriteMovies] = useState([]);
+
+  // ⭐ ADDED: MOOD BADGE RENGİ
+  const getMoodColor = (moodName) => {
+    const found = MOODS.find((m) => m.name === moodName);
+    return found ? found.color : "bg-gray-700";
+  };
+
   // --- FETCH TRENDING MOVIES ON MOUNT ---
   useEffect(() => {
     const fetchTrendingMovies = async () => {
@@ -51,11 +60,32 @@ const Movies = () => {
     fetchTrendingMovies();
   }, []);
 
+  // ⭐ ADDED: KULLANICININ FAVORİ FİLMLERİNİ ÇEK
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFavorites = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/users/profile/${user._id}`
+        );
+        setFavoriteMovies(res.data.favoriteMovies || []);
+      } catch (error) {
+        console.error("Favorite movies fetch error:", error);
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
+
   // --- SEARCH ---
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query) return;
-    setLoading(true); setMovies([]); setSearched(false); setSortType("relevance");
+    setLoading(true);
+    setMovies([]);
+    setSearched(false);
+    setSortType("relevance");
     setSearchedQuery(query); // Arama yapıldığında query'yi searchedQuery'ye kaydet
     try {
       const res = await axios.get(`http://localhost:5000/api/movies/search?q=${query}`);
@@ -64,7 +94,8 @@ const Movies = () => {
       console.error("Search error:", error);
       showToast("error", "Error searching for movies.");
     } finally {
-      setLoading(false); setSearched(true);
+      setLoading(false);
+      setSearched(true);
     }
   };
 
@@ -72,11 +103,18 @@ const Movies = () => {
     const type = e.target.value;
     setSortType(type);
     let sortedMovies = [...movies];
-    // ... Sıralama mantığı aynı ...
+
     if (type === "rating_desc") sortedMovies.sort((a, b) => b.rating - a.rating);
     else if (type === "rating_asc") sortedMovies.sort((a, b) => a.rating - b.rating);
-    else if (type === "year_desc") sortedMovies.sort((a, b) => parseInt(b.releaseDate) - parseInt(a.releaseDate));
-    else if (type === "year_asc") sortedMovies.sort((a, b) => parseInt(a.releaseDate) - parseInt(b.releaseDate));
+    else if (type === "year_desc")
+      sortedMovies.sort(
+        (a, b) => parseInt(b.releaseDate) - parseInt(a.releaseDate)
+      );
+    else if (type === "year_asc")
+      sortedMovies.sort(
+        (a, b) => parseInt(a.releaseDate) - parseInt(b.releaseDate)
+      );
+
     setMovies(sortedMovies);
   };
 
@@ -94,27 +132,28 @@ const Movies = () => {
       setModalLoading(false);
     }
   };
+
   const fetchTrailer = async (movieId) => {
     setTrailerLoading(true);
     setTrailerUrl(null);
 
-  try {
-    const res = await axios.get(
-      `http://localhost:5000/api/movies/trailer/${movieId}`
-    );
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/movies/trailer/${movieId}`
+      );
 
-    if (!res.data.trailer) {
-      showToast("info", "Trailer bulunamadı 🎬❌");
-    } else {
-      setTrailerUrl(res.data.trailer);
+      if (!res.data.trailer) {
+        showToast("info", "Trailer bulunamadı 🎬❌");
+      } else {
+        setTrailerUrl(res.data.trailer);
+      }
+    } catch (error) {
+      console.error("Trailer Fetch Error:", error);
+      showToast("error", "Trailer yüklenirken hata oluştu.");
+    } finally {
+      setTrailerLoading(false);
     }
-  } catch (error) {
-    console.error("Trailer Fetch Error:", error);
-    showToast("error", "Trailer yüklenirken hata oluştu.");
-  } finally {
-    setTrailerLoading(false);
-  }
-};
+  };
 
   const closeModal = () => {
     setSelectedMovie(null);
@@ -124,8 +163,8 @@ const Movies = () => {
   // --- FAVORİ EKLEME MANTIĞI ---
   const initiateFavorite = (movie) => {
     if (!user) {
-        setShowLoginPrompt(true);
-        return;
+      setShowLoginPrompt(true);
+      return;
     }
     setMovieToFavorite(movie);
     setShowMoodModal(true);
@@ -133,21 +172,24 @@ const Movies = () => {
 
   const saveFavoriteWithMood = async (mood) => {
     try {
-        await axios.post("http://localhost:5000/api/users/favorites/add-movie", {
-            userId: user._id,
-            movie: {
-                id: movieToFavorite.id,
-                title: movieToFavorite.title,
-                posterPath: movieToFavorite.poster, 
-            },
-            mood: mood
-        });
-        showToast("success", `Movie added to favorites as ${mood}! 🎬`);
-        setShowMoodModal(false);
+      await axios.post("http://localhost:5000/api/users/favorites/add-movie", {
+        userId: user._id,
+        movie: {
+          id: movieToFavorite.id,
+          title: movieToFavorite.title,
+          posterPath: movieToFavorite.poster,
+        },
+        mood: mood,
+      });
+      showToast("success", `Movie added to favorites as ${mood}! 🎬`);
+      setShowMoodModal(false);
     } catch (error) {
-        console.error(error);
-        showToast("error", error.response?.data?.message || "Something went wrong.");
-        setShowMoodModal(false);
+      console.error(error);
+      showToast(
+        "error",
+        error.response?.data?.message || "Something went wrong."
+      );
+      setShowMoodModal(false);
     }
   };
 
@@ -159,52 +201,122 @@ const Movies = () => {
         </h1>
 
         {/* SEARCH BAR */}
-        <form onSubmit={handleSearch} className="flex gap-4 mb-8 max-w-3xl mx-auto">
-          <input 
-            type="text" 
-            placeholder="Search for a movie..." 
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg" 
-            value={query} 
+        <form
+          onSubmit={handleSearch}
+          className="flex gap-4 mb-8 max-w-3xl mx-auto"
+        >
+          <input
+            type="text"
+            placeholder="Search for a movie..."
+            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
+            value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               // Eğer input boşsa, arama sonuçlarını temizle ve Trending Movies'ı göster
-              if (e.target.value === '') {
+              if (e.target.value === "") {
                 setMovies([]);
                 setSearched(false);
-                setSearchedQuery('');
+                setSearchedQuery("");
               }
-            }} 
+            }}
           />
-          <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg transition" disabled={loading}>{loading ? "..." : "Search"}</button>
+          <button
+            type="submit"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-4 rounded-full font-bold text-lg transition"
+            disabled={loading}
+          >
+            {loading ? "..." : "Search"}
+          </button>
         </form>
 
-        {/* TRENDING MOVIES SECTION (when not searched) */}
+        {/* FAVORITES + TRENDING MOVIES SECTION (when not searched) */}
         {!searched && (
           <>
+            {/* ⭐ ADDED: FAVORITE MOVIES SECTION */}
+            {user && favoriteMovies.length > 0 && (
+              <>
+                <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
+                  Your Favorite Movies
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
+                  {favoriteMovies.map((fav) => (
+                    <div
+                      key={fav._id}
+                      onClick={() => fetchDetailsAndOpen(fav._id)} // _id = TMDb movie id
+                      className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
+                    >
+                      <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
+                        {fav.posterPath || fav.poster ? (
+                          <img
+                            src={fav.posterPath || fav.poster}
+                            alt={fav.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-5xl text-gray-500">🎞️</span>
+                        )}
+
+                        {fav.userMood && (
+                          <span
+                            className={`absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-bold shadow-md ${getMoodColor(
+                              fav.userMood
+                            )}`}
+                          >
+                            {fav.userMood}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold truncate text-lg text-white group-hover:text-indigo-400 transition">
+                          {fav.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm truncate">
+                          {fav.releaseDate
+                            ? fav.releaseDate.substring(0, 4)
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* TRENDING MOVIES */}
             {initialLoading ? (
-              <p className="text-center text-gray-500 py-20">Loading trending movies...</p>
+              <p className="text-center text-gray-500 py-20">
+                Loading trending movies...
+              </p>
             ) : (
               <>
                 <h2 className="text-3xl font-bold mb-8 border-l-4 border-yellow-500 pl-4 flex items-center gap-2 text-yellow-500">
-                  🔥 Trending Movies
+                  Trending Movies
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
                   {trendingMovies.map((movie) => (
-                    <div 
-                      key={movie.id} 
-                      onClick={() => fetchDetailsAndOpen(movie.id)} 
+                    <div
+                      key={movie.id}
+                      onClick={() => fetchDetailsAndOpen(movie.id)}
                       className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
                     >
                       <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
                         {movie.poster ? (
-                          <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                          <img
+                            src={movie.poster}
+                            alt={movie.title}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <span className="text-5xl text-gray-500">🎞️</span>
                         )}
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">⭐ {movie.rating.toFixed(1)}</div>
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">
+                          ⭐ {movie.rating.toFixed(1)}
+                        </div>
                       </div>
                       <div className="p-4">
-                        <h3 className="font-bold truncate text-lg text-white group-hover:text-yellow-400 transition">{movie.title}</h3>
+                        <h3 className="font-bold truncate text-lg text-white group-hover:text-yellow-400 transition">
+                          {movie.title}
+                        </h3>
                       </div>
                     </div>
                   ))}
@@ -217,10 +329,20 @@ const Movies = () => {
         {/* RESULTS INFO & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
-            <p className="text-gray-400">Found <span className="text-indigo-400 font-bold">{movies.length}</span> results for "{searchedQuery}"</p>
+            <p className="text-gray-400">
+              Found{" "}
+              <span className="text-indigo-400 font-bold">
+                {movies.length}
+              </span>{" "}
+              results for "{searchedQuery}"
+            </p>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-400">Sort By:</span>
-              <select value={sortType} onChange={handleSortChange} className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer">
+              <select
+                value={sortType}
+                onChange={handleSortChange}
+                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer"
+              >
                 <option value="relevance">Recommended</option>
                 <option value="rating_desc">Rating (High to Low)</option>
                 <option value="rating_asc">Rating (Low to High)</option>
@@ -235,76 +357,140 @@ const Movies = () => {
         {searched && (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {movies.map((movie) => (
-              <div key={movie.id} onClick={() => fetchDetailsAndOpen(movie.id)} className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700">
+              <div
+                key={movie.id}
+                onClick={() => fetchDetailsAndOpen(movie.id)}
+                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+              >
                 <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
-                  {movie.poster ? <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" /> : <span className="text-5xl text-gray-500">🎞️</span>}
-                  <div className="absolute top-2 right-2 bg-black/70 text-indigo-100 text-xs font-bold px-2 py-1 rounded backdrop-blur-sm">⭐ {movie.rating.toFixed(1)}</div>
+                  {movie.poster ? (
+                    <img
+                      src={movie.poster}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-5xl text-gray-500">🎞️</span>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/70 text-indigo-100 text-xs font-bold px-2 py-1 rounded backdrop-blur-sm">
+                    ⭐ {movie.rating.toFixed(1)}
+                  </div>
                 </div>
-                <div className="p-3"><h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">{movie.title}</h3></div>
+                <div className="p-3">
+                  <h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">
+                    {movie.title}
+                  </h3>
+                </div>
               </div>
             ))}
           </div>
         )}
 
         {/* NO RESULTS */}
-        {movies.length === 0 && !loading && searched && <div className="text-center text-gray-500 mt-20"><p className="text-xl">🎬</p><p>No movies found matching your criteria.</p></div>}
+        {movies.length === 0 && !loading && searched && (
+          <div className="text-center text-gray-500 mt-20">
+            <p className="text-xl">🎬</p>
+            <p>No movies found matching your criteria.</p>
+          </div>
+        )}
       </div>
 
       {/* --- DETAIL MODAL --- */}
       {selectedMovie && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeModal}>
-          <div className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center">×</button>
-            {modalLoading ? <div className="p-20 w-full text-center text-xl">Loading...</div> : (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center"
+            >
+              ×
+            </button>
+            {modalLoading ? (
+              <div className="p-20 w-full text-center text-xl">Loading...</div>
+            ) : (
               <>
                 <div className="w-full md:w-1/3 h-96 md:h-auto relative">
-                  <img src={selectedMovie.poster} alt={selectedMovie.title} className="w-full h-full object-cover" />
+                  <img
+                    src={selectedMovie.poster}
+                    alt={selectedMovie.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="w-full md:w-2/3 p-8 flex flex-col">
-                  <h2 className="text-3xl font-bold text-white mb-2">{selectedMovie.title}</h2>
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    {selectedMovie.title}
+                  </h2>
                   <div className="flex flex-wrap gap-3 mb-4">
-                    {selectedMovie.genres?.map((g) => <span key={g} className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300">{g}</span>)}
+                    {selectedMovie.genres?.map((g) => (
+                      <span
+                        key={g}
+                        className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300"
+                      >
+                        {g}
+                      </span>
+                    ))}
                   </div>
-                  <p className="text-gray-300 leading-relaxed mb-6">{selectedMovie.overview}</p>
-                  
-                  {/* ... Cast & Director bölümleri ... */}
+                  <p className="text-gray-300 leading-relaxed mb-6">
+                    {selectedMovie.overview}
+                  </p>
+
+                  {/* Cast & Director bölümleri */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">Director</h4>
+                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
+                        Director
+                      </h4>
                       <p className="text-gray-300">{selectedMovie.director}</p>
                     </div>
                     <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">Cast</h4>
+                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
+                        Cast
+                      </h4>
                       <div className="flex flex-col gap-2">
                         {selectedMovie.cast?.map((actor) => (
-                          <div key={actor.name} className="flex items-center gap-3">
-                            <img src={actor.photo || "https://via.placeholder.com/50"} alt={actor.name} className="w-8 h-8 rounded-full object-cover" />
+                          <div
+                            key={actor.name}
+                            className="flex items-center gap-3"
+                          >
+                            <img
+                              src={
+                                actor.photo || "https://via.placeholder.com/50"
+                              }
+                              alt={actor.name}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
                             <div>
-                              <p className="text-sm text-white">{actor.name}</p>
+                              <p className="text-sm text-white">
+                                {actor.name}
+                              </p>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
-                    {/* 👇 FİLM FAVORİ BUTONU (Aktif) */}
-                    <button 
-                        onClick={() => initiateFavorite(selectedMovie)} 
-                        className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black py-3 rounded-lg font-bold shadow-lg"
-                    >
-                      ❤️ Favorite
-                    </button>
                     <button
                       className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center"
                       onClick={() => {
                         fetchTrailer(selectedMovie.id);
                         setShowTrailerModal(true);
-                        
                       }}
                     >
                       Watch Trailer
+                    </button>
+                    <button
+                      onClick={() => initiateFavorite(selectedMovie)}
+                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
+                    >
+                      ❤️ Favorite
                     </button>
                   </div>
                 </div>
@@ -345,41 +531,63 @@ const Movies = () => {
           </div>
         </div>
       )}
-     
-  
 
-
-      {/* --- MOOD MODAL (YENİ) --- */}
+      {/* --- MOOD MODAL --- */}
       {showMoodModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
           <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
             <h3 className="text-2xl font-bold mb-2 text-white">Select Mood</h3>
             <div className="grid grid-cols-2 gap-3 mt-4">
               {MOODS.map((m) => (
-                <button key={m.name} onClick={() => saveFavoriteWithMood(m.name)} className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}>
+                <button
+                  key={m.name}
+                  onClick={() => saveFavoriteWithMood(m.name)}
+                  className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}
+                >
                   <span className="text-xl">{m.emoji}</span> {m.name}
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowMoodModal(false)} className="mt-6 text-gray-400 hover:text-white underline text-sm">Cancel</button>
+            <button
+              onClick={() => setShowMoodModal(false)}
+              className="mt-6 text-gray-400 hover:text-white underline text-sm"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
-      {/* --- LOGIN PROMPT MODAL (YENİ) --- */}
+      {/* --- LOGIN PROMPT MODAL --- */}
       {showLoginPrompt && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[65] p-4 backdrop-blur-md">
           <div className="bg-gray-900 p-8 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-3 text-white">Login required</h3>
-            <p className="text-gray-300 text-sm mb-6">You need to be logged in to add movies to your favorites.</p>
+            <h3 className="text-2xl font-bold mb-3 text-white">
+              Login required
+            </h3>
+            <p className="text-gray-300 text-sm mb-6">
+              You need to be logged in to add movies to your favorites.
+            </p>
             <div className="flex gap-3">
-              <button onClick={() => setShowLoginPrompt(false)} className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-semibold">Maybe later</button>
-              <button onClick={() => { setShowLoginPrompt(false); navigate("/login"); }} className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-bold">Go to Login</button>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-semibold"
+              >
+                Maybe later
+              </button>
+              <button
+                onClick={() => {
+                  setShowLoginPrompt(false);
+                  navigate("/login");
+                }}
+                className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-bold"
+              >
+                Go to Login
+              </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };
