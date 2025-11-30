@@ -374,7 +374,7 @@ const Songs = () => {
 
                   <div className="flex gap-4 mt-auto">
                     <button
-                      onClick={() => setPlayingTrack(selectedTrack.id)}
+                      onClick={() => setPlayingTrack(selectedTrack.playableId)}
                       className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold"
                     >
                       Play Now
