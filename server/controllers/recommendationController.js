@@ -5,11 +5,11 @@ const History = require('../models/History');
 const qs = require('qs'); 
 
 const MOOD_CONFIG = {
-    'Happy': { keyword: 'happy hits', genreId: 35 },      // Comedy
-    'Sad': { keyword: 'sad songs', genreId: 18 },         // Drama
-    'Energetic': { keyword: 'workout motivation', genreId: 28 }, // Action
-    'Chill': { keyword: 'chill relax', genreId: 878 },    // Sci-Fi
-    'Romantic': { keyword: 'love songs', genreId: 10749 } // Romance
+    'Happy': { keyword: 'happy hits', genreId: 35 },
+    'Sad': { keyword: 'sad songs', genreId: 18 },
+    'Energetic': { keyword: 'workout motivation', genreId: 28 },
+    'Chill': { keyword: 'chill relax', genreId: 878 },
+    'Romantic': { keyword: 'love songs', genreId: 10749 }
 };
 
 const getSpotifyToken = async () => {
@@ -40,46 +40,71 @@ const getRecommendations = async (req, res) => {
         // 🎵 1. MÜZİK TAVSİYESİ
         // ---------------------------------------------------------
         let searchQuery = config.keyword; 
-        let musicNote = "Genel öneri";
+        let musicNote = "Popüler öneri";
         let usedPersonalization = false;
 
-        // A. Kişiselleştirme
-        if (user && user.favoriteTracks.length > 0) {
+        // A. Kişiselleştirme Denemesi
+        if (user && user.favoriteTracks && user.favoriteTracks.length > 0) {
             const matchingFavorites = user.favoriteTracks.filter(t => t.mood === mood);
+            // Eğer o modda favori yoksa genel havuzdan seç
             const pool = matchingFavorites.length > 0 ? matchingFavorites : user.favoriteTracks;
             
-            const seedFav = pool[Math.floor(Math.random() * pool.length)];
-            const trackInDb = await Track.findOne({ spotifyId: seedFav.spotifyId });
-            
-            if (trackInDb) {
-                searchQuery = `${trackInDb.artist} ${mood}`;
-                musicNote = `Favorin "${trackInDb.title}" tarzında`;
-                usedPersonalization = true;
+            if (pool.length > 0) {
+                const seedFav = pool[Math.floor(Math.random() * pool.length)];
+                
+                // Veritabanından bak (Spotify'a sormaya gerek yok)
+                const trackInDb = await Track.findOne({ spotifyId: seedFav.spotifyId });
+                if (trackInDb && trackInDb.artist) {
+                    searchQuery = `${trackInDb.artist} ${mood}`;
+                    musicNote = `Favorin "${trackInDb.title}" tarzında`;
+                    usedPersonalization = true;
+                }
             }
         }
 
-        // B. Spotify Arama
-        const randomOffset = Math.floor(Math.random() * 5);
-        let spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1&offset=${randomOffset}`;
-        let spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-        let tracks = spotifyRes.data.tracks.items;
+        console.log(`🔍 Arama: "${searchQuery}"`);
 
-        // C. Yedek Plan
-        if (tracks.length === 0 && usedPersonalization) {
-            searchQuery = config.keyword;
-            musicNote = "Moduna uygun popüler öneri";
-            spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`;
-            spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-            tracks = spotifyRes.data.tracks.items;
+        // B. Spotify Arama
+        let tracks = [];
+        try {
+            const randomOffset = Math.floor(Math.random() * 5);
+            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50&offset=${randomOffset}`;
+            const spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+            
+            if (spotifyRes.data.tracks && spotifyRes.data.tracks.items) {
+                tracks = spotifyRes.data.tracks.items;
+            }
+        } catch (err) {
+            console.log("Spotify Arama Hatası (Yedeğe geçiliyor):", err.message);
         }
 
-        if (tracks.length === 0) throw new Error("Şarkı bulunamadı.");
-        const recommendedTrackData = tracks[0];
+        // C. Sonuç Yoksa Yedek Arama
+        if (tracks.length === 0 && usedPersonalization) {
+            console.log("⚠️ Kişisel sonuç boş, genel arama yapılıyor...");
+            searchQuery = config.keyword;
+            musicNote = "Moduna uygun hit";
+            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50`;
+            const spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+            tracks = spotifyRes.data.tracks?.items || [];
+        }
+
+        if (tracks.length === 0) throw new Error("Spotify şarkı bulamadı.");
+
+        // 🔥 KALİTE KONTROLÜ 🔥
+        // Popülerliğe göre sırala, en iyi 10'u al
+        tracks.sort((a, b) => b.popularity - a.popularity);
+        const topTracks = tracks.slice(0, 10);
+        const recommendedTrackData = topTracks[Math.floor(Math.random() * topTracks.length)];
+
+        // ⚠️ GÜVENLİK KONTROLÜ: Sanatçı var mı?
+        const artistName = (recommendedTrackData.artists && recommendedTrackData.artists.length > 0) 
+            ? recommendedTrackData.artists[0].name 
+            : "Bilinmeyen Sanatçı";
 
         const recommendedTrack = {
             id: recommendedTrackData.id,
             name: recommendedTrackData.name,
-            artist: recommendedTrackData.artists[0].name,
+            artist: artistName,
             image: recommendedTrackData.album.images[0]?.url,
             previewUrl: recommendedTrackData.preview_url,
             spotifyUrl: recommendedTrackData.external_urls.spotify
@@ -87,50 +112,49 @@ const getRecommendations = async (req, res) => {
 
 
         // ---------------------------------------------------------
-        // 🎬 2. FİLM TAVSİYESİ (DÜZELTİLEN KISIM)
+        // 🎬 2. FİLM TAVSİYESİ (GÜVENLİ)
         // ---------------------------------------------------------
         let movieUrl = "";
         let movieNote = "Popüler film";
+        let movieResults = [];
 
-        // Favorilerden benzer film bul
-        const matchingMovies = user.favoriteMovies.filter(m => m.mood === mood);
+        const matchingMovies = user.favoriteMovies ? user.favoriteMovies.filter(m => m.mood === mood) : [];
 
+        // Favori Filmden Benzer Bulma
         if (matchingMovies.length > 0) {
             const seedMovie = matchingMovies[Math.floor(Math.random() * matchingMovies.length)];
             movieUrl = `https://api.themoviedb.org/3/movie/${seedMovie.tmdbId}/recommendations?api_key=${process.env.TMDB_API_KEY}&language=en-US&page=1`;
-            movieNote = "Beğendiğin filmlere dayanarak";
-        } else {
-            // Favori yoksa Tür'e göre keşfet
-            // 👇 KRİTİK: vote_count.gte=300 ekledik ki ratingi 0 olan bilinmeyen filmler gelmesin
-            movieUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.TMDB_API_KEY}&with_genres=${config.genreId}&sort_by=popularity.desc&vote_count.gte=300&page=${Math.floor(Math.random()*3)+1}`;
+            movieNote = "Beğendiğin filmlere benzer";
+            
+            try {
+                const tmdbRes = await axios.get(movieUrl);
+                movieResults = tmdbRes.data.results || [];
+            } catch (err) { /* Hata olursa genel aramaya düşecek */ }
         }
 
-        const tmdbRes = await axios.get(movieUrl);
-        const movieResults = tmdbRes.data.results;
-        
-        // Eğer boş dönerse yedek plan
+        // Eğer sonuç yoksa Genel Keşif
         if (movieResults.length === 0) {
-             const backupUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.TMDB_API_KEY}&with_genres=${config.genreId}&sort_by=popularity.desc&vote_count.gte=300`;
-             const backupRes = await axios.get(backupUrl);
-             movieResults.push(...backupRes.data.results);
+            movieUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.TMDB_API_KEY}&with_genres=${config.genreId}&sort_by=popularity.desc&vote_count.gte=300&page=${Math.floor(Math.random()*3)+1}`;
+            const tmdbRes = await axios.get(movieUrl);
+            movieResults = tmdbRes.data.results || [];
         }
 
-        const movieData = movieResults[0];
+        // Rastgele Seçim (Top 10 içinden)
+        const topMovies = movieResults.slice(0, 10);
+        const movieData = topMovies.length > 0 ? topMovies[Math.floor(Math.random() * topMovies.length)] : null;
 
-        // 👇 VERİ MAPLEME (RESİM URL'İ DÜZELTİLDİ)
         const recommendedMovie = movieData ? {
             id: movieData.id,
             title: movieData.title,
             overview: movieData.overview,
-            // 👇 Başına linki ekledik
             poster: movieData.poster_path ? `https://image.tmdb.org/t/p/w500${movieData.poster_path}` : null,
-            rating: movieData.vote_average || 0, // Puan yoksa 0
+            rating: movieData.vote_average,
             releaseDate: movieData.release_date
         } : null;
 
 
         // ---------------------------------------------------------
-        // 💾 3. KAYDET VE GÖNDER
+        // 💾 3. KAYDET
         // ---------------------------------------------------------
         if (recommendedTrack && recommendedMovie) {
             await History.create({
@@ -163,7 +187,8 @@ const getRecommendations = async (req, res) => {
 
     } catch (error) {
         console.error("Algoritma Hatası:", error.message);
-        res.status(500).json({ message: 'Tavsiye alınamadı', detail: error.message });
+        // Detaylı hata yerine genel mesaj dönüyoruz ki frontend patlamasın
+        res.status(500).json({ message: 'Tavsiye alınamadı' });
     }
 };
 
