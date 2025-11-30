@@ -20,7 +20,7 @@ const Movies = () => {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [trailerUrl, setTrailerUrl] = useState(null);
-  const [setTrailerLoading] = useState(false);
+  const [trailerLoading, setTrailerLoading] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [movieToFavorite, setMovieToFavorite] = useState(null);

@@ -25,7 +25,7 @@ const Home = () => {
 
   // --- TRAILER STATES ---
   const [trailerUrl, setTrailerUrl] = useState(null);
-  const [setTrailerLoading] = useState(false);
+  const [trailerLoading, setTrailerLoading] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // Login gerekli uyarısı için modal
