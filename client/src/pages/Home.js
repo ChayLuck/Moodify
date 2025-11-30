@@ -4,7 +4,6 @@ import axios from "axios";
 import { useToast } from "../context/ToastContext";
 
 const Home = () => {
-  // --- GLOBAL TOAST ---
   const { showToast } = useToast();
 
   // --- DATA STATES ---
@@ -19,7 +18,15 @@ const Home = () => {
   const [modalLoading, setModalLoading] = useState(false);
 
   const [showMoodModal, setShowMoodModal] = useState(false);
+
+  // Favoriye eklenmek istenen öğeler için state'ler
   const [trackToFavorite, setTrackToFavorite] = useState(null);
+  const [movieToFavorite, setMovieToFavorite] = useState(null);
+
+  // --- TRAILER STATES ---
+  const [trailerUrl, setTrailerUrl] = useState(null);
+  const [setTrailerLoading] = useState(false);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // Login gerekli uyarısı için modal
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -35,7 +42,9 @@ const Home = () => {
     { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
   ];
 
-  // --- VERİ ÇEKME ---
+  // ⭐ TRACK DETAILS CACHE
+  const [trackDetailsCache, setTrackDetailsCache] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -45,24 +54,24 @@ const Home = () => {
         const songRes = await axios.get(
           "http://localhost:5000/api/content/new-releases"
         );
-
         setMovies(movieRes.data);
         setSongs(songRes.data);
         setLoading(false);
       } catch (error) {
         console.error("Data Error:", error);
         setLoading(false);
-        showToast("error", "Failed to load content. Please try again later.");
+        showToast("error", "Failed to load content.");
       }
     };
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- FILM DETAY MODALI ---
+  // --- MODAL AÇMA FONKSİYONLARI ---
   const openMovieModal = async (movieId) => {
+    if (modalLoading) return;
     setModalLoading(true);
-    setSelectedMovie({ id: movieId }); // Boş aç
+    setSelectedMovie({ id: movieId });
     document.body.style.overflow = "hidden";
     try {
       const res = await axios.get(
@@ -76,21 +85,72 @@ const Home = () => {
     setModalLoading(false);
   };
 
-  // --- ŞARKI DETAY MODALI ---
-  const openTrackModal = async (trackId) => {
-    setModalLoading(true);
-    setSelectedTrack({ id: trackId });
-    document.body.style.overflow = "hidden";
+  // --- TRAILER FETCH ---
+  const fetchTrailer = async (movieId) => {
+    setTrailerLoading(true);
+    setTrailerUrl(null);
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/songs/details/${trackId}`
+        `http://localhost:5000/api/movies/trailer/${movieId}`
       );
+
+      if (!res.data.trailer) {
+        showToast("info", "Trailer bulunamadı 🎬❌");
+      } else {
+        setTrailerUrl(res.data.trailer);
+      }
+    } catch (error) {
+      console.error("Trailer Fetch Error:", error);
+      showToast("error", "Trailer yüklenirken hata oluştu.");
+    } finally {
+      setTrailerLoading(false);
+    }
+  };
+
+  // --- ŞARKI DETAY MODALI (OPTIMISTIC + CACHE) ---
+  const openTrackModal = async (track) => {
+    document.body.style.overflow = "hidden";
+
+    // 1) Cache'te varsa direkt onu göster
+    const cached = trackDetailsCache[track.id];
+    if (cached) {
+      setSelectedTrack(cached);
+      setModalLoading(false);
+      return;
+    }
+
+    // 2) Optimistic UI: Karttaki verilerle modalı hemen doldur
+    setSelectedTrack({
+      playableId: track.id,
+      id: track.id,
+      name: track.name,
+      artist: track.artist,
+      image: track.image,
+      album: "Loading...",
+      releaseDate: "",
+      popularity: 0,
+    });
+
+    setModalLoading(true);
+
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/songs/details/${track.id}`
+      );
+
       setSelectedTrack(res.data);
+
+      // 3) Sonucu cache'e koy
+      setTrackDetailsCache((prev) => ({
+        ...prev,
+        [track.id]: res.data,
+      }));
     } catch (error) {
       console.error(error);
       showToast("error", "Track details could not be loaded.");
+    } finally {
+      setModalLoading(false);
     }
-    setModalLoading(false);
   };
 
   const closeModal = () => {
@@ -99,31 +159,72 @@ const Home = () => {
     document.body.style.overflow = "auto";
   };
 
-  // --- FAVORİ EKLEME BAŞLAT ---
-  const initiateFavorite = (track) => {
+  // --- FAVORİ İŞLEMLERİ ---
+
+  // 1. Şarkı Favoriye Ekleme Başlat
+  const initiateTrackFavorite = (track) => {
     if (!user) {
       setShowLoginPrompt(true);
       return;
     }
     setTrackToFavorite(track);
+    setMovieToFavorite(null); // Çakışmayı önlemek için diğerini temizle
     setShowMoodModal(true);
   };
 
+  // 2. Film Favoriye Ekleme Başlat
+  const initiateMovieFavorite = (movie) => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setMovieToFavorite(movie);
+    setTrackToFavorite(null); // Çakışmayı önlemek için diğerini temizle
+    setShowMoodModal(true);
+  };
+
+  // 3. Seçilen Mood ile Backend'e Kaydetme
   const saveFavoriteWithMood = async (mood) => {
     try {
-      await axios.post("http://localhost:5000/api/users/favorites/add", {
-        userId: user._id,
-        track: {
-          id: trackToFavorite.id,
-          name: trackToFavorite.name,
-          artist: trackToFavorite.artist,
-          artistId: trackToFavorite.artistId,
-          image: trackToFavorite.image,
-          previewUrl: trackToFavorite.previewUrl,
-        },
-        mood: mood,
-      });
-      showToast("success", `Added to favorites as ${mood}! ❤️`);
+      // A. ŞARKI İSE
+      if (trackToFavorite) {
+        await axios.post("http://localhost:5000/api/users/favorites/add", {
+          userId: user._id,
+          track: {
+            id: trackToFavorite.id,
+            name: trackToFavorite.name,
+            artist: trackToFavorite.artist,
+            artistId: trackToFavorite.artistId,
+            image: trackToFavorite.image,
+            previewUrl: trackToFavorite.previewUrl,
+          },
+          mood: mood,
+        });
+        showToast(
+          "success",
+          `${trackToFavorite.name} added to favorites as ${mood}!`
+        );
+      }
+      // B. FİLM İSE
+      else if (movieToFavorite) {
+        await axios.post(
+          "http://localhost:5000/api/users/favorites/add-movie",
+          {
+            userId: user._id,
+            movie: {
+              id: movieToFavorite.id,
+              title: movieToFavorite.title,
+              posterPath: movieToFavorite.poster,
+            },
+            mood: mood,
+          }
+        );
+        showToast(
+          "success",
+          `${movieToFavorite.title} added to favorites as ${mood}!`
+        );
+      }
+
       setShowMoodModal(false);
     } catch (error) {
       console.error(error);
@@ -146,30 +247,20 @@ const Home = () => {
           Discover movies and music based on your mood.
         </p>
         <div className="flex justify-center gap-4">
-          {user ? (
-            <Link
-              to="/dashboard"
-              className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
-            >
-              Get Recommendations
-            </Link>
-          ) : (
-            <Link
-              to="/signup"
-              className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
-            >
-              Start for Free
-            </Link>
-          )}
+          <Link
+            to={user ? "/dashboard" : "/signup"}
+            className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
+          >
+            {user ? "Get Recommendations" : "Start for Free"}
+          </Link>
         </div>
       </div>
 
       {/* TRENDING MOVIES */}
       <div className="container mx-auto px-6 mt-16">
         <h2 className="text-3xl font-bold mb-8 border-l-4 border-yellow-500 pl-4 flex items-center gap-2 text-yellow-500">
-          🔥 Trending Movies
+          Trending Movies
         </h2>
-
         {loading ? (
           <p className="text-center text-gray-500">Loading...</p>
         ) : (
@@ -177,7 +268,7 @@ const Home = () => {
             {movies.map((movie) => (
               <div
                 key={movie.id}
-                onClick={() => openMovieModal(movie.id)}
+                onClick={() => !modalLoading && openMovieModal(movie.id)}
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer"
               >
                 <div className="relative">
@@ -204,9 +295,8 @@ const Home = () => {
       {/* NEW RELEASES */}
       <div className="container mx-auto px-6 mt-20">
         <h2 className="text-3xl font-bold mb-8 border-l-4 border-green-500 pl-4 flex items-center gap-2 text-green-500">
-          🎵 New Releases
+          New Releases
         </h2>
-
         {loading ? (
           <p className="text-center text-gray-500">Loading...</p>
         ) : (
@@ -214,7 +304,7 @@ const Home = () => {
             {songs.map((song) => (
               <div
                 key={song.id}
-                onClick={() => openTrackModal(song.id)}
+                onClick={() => !modalLoading && openTrackModal(song)}
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-green-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer"
               >
                 <div className="relative">
@@ -223,11 +313,6 @@ const Home = () => {
                     alt={song.name}
                     className="w-full h-64 object-cover transition duration-300 group-hover:opacity-80"
                   />
-                  {/* <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
-                    <span className="bg-green-500 text-black rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg">
-                      🔍
-                    </span>
-                  </div> */}
                 </div>
                 <div className="p-4">
                   <h3 className="font-bold truncate text-lg text-white group-hover:text-green-400 transition">
@@ -287,6 +372,7 @@ const Home = () => {
                   <p className="text-gray-300 leading-relaxed mb-6">
                     {selectedMovie.overview}
                   </p>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
@@ -312,35 +398,68 @@ const Home = () => {
                               className="w-8 h-8 rounded-full object-cover"
                             />
                             <div>
-                              <p className="text-sm text-white">{actor.name}</p>
+                              <p className="text-sm text-white">
+                                {actor.name}
+                              </p>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                  {/* BUTONLAR */}
+
                   <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
                     <button
-                      onClick={closeModal}
-                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold"
+                      onClick={() => {
+                        fetchTrailer(selectedMovie.id);
+                        setShowTrailerModal(true);
+                      }}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-bold"
                     >
-                      Close
+                      Watch Trailer
                     </button>
                     <button
-                      onClick={() =>
-                        showToast(
-                          "info",
-                          "Movie favorites feature coming soon! 🎬❤️"
-                        )
-                      }
-                      className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black py-3 rounded-lg font-bold"
+                      onClick={() => initiateMovieFavorite(selectedMovie)}
+                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
                     >
                       ❤️ Favorite
                     </button>
                   </div>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- TRAILER MODAL --- */}
+      {showTrailerModal && (
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowTrailerModal(false)}
+        >
+          <div
+            className="bg-gray-900 rounded-xl w-full max-w-4xl p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowTrailerModal(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-3xl"
+            >
+              &times;
+            </button>
+
+            {!trailerUrl ? (
+              <p className="text-center text-gray-400 py-10 text-xl">
+                Trailer Loading 🎬
+              </p>
+            ) : (
+              <iframe
+                src={trailerUrl}
+                title="Trailer"
+                className="w-full h-[400px] rounded-lg border border-gray-700"
+                allow="autoplay; fullscreen"
+              ></iframe>
             )}
           </div>
         </div>
@@ -362,62 +481,56 @@ const Home = () => {
             >
               ×
             </button>
-            {modalLoading ? (
-              <div className="p-20 w-full text-center text-xl">Loading...</div>
-            ) : (
-              <>
-                <div className="w-full md:w-1/2 h-80 md:h-auto relative">
-                  <img
-                    src={selectedTrack.image}
-                    alt={selectedTrack.name}
-                    className="w-full h-full object-cover"
-                  />
+            <div className="w-full md:w-1/2 h-80 md:h-auto relative">
+              <img
+                src={selectedTrack.image}
+                alt={selectedTrack.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
+              <h2 className="text-3xl font-bold text-white mb-2">
+                {selectedTrack.name}
+              </h2>
+              <p className="text-xl text-green-400 mb-6">
+                {selectedTrack.artist}
+              </p>
+              <div className="space-y-3 text-gray-300 text-sm mb-8">
+                <div className="flex justify-between border-b border-gray-800 pb-2">
+                  <span>Album</span>
+                  <span className="text-white">{selectedTrack.album}</span>
                 </div>
-                <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {selectedTrack.name}
-                  </h2>
-                  <p className="text-xl text-green-400 mb-6">
-                    {selectedTrack.artist}
-                  </p>
-                  <div className="space-y-3 text-gray-300 text-sm mb-8">
-                    <div className="flex justify-between border-b border-gray-800 pb-2">
-                      <span>Album</span>
-                      <span className="text-white">{selectedTrack.album}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-800 pb-2">
-                      <span>Release Date</span>
-                      <span className="text-white">
-                        {selectedTrack.releaseDate}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Popularity</span>
-                      <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500"
-                          style={{ width: `${selectedTrack.popularity}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 mt-auto">
-                    <button
-                      onClick={() => setPlayingTrack(selectedTrack.playableId)}
-                      className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold shadow-lg"
-                    >
-                      ▶ Play Now
-                    </button>
-                    <button
-                      onClick={() => initiateFavorite(selectedTrack)}
-                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
-                    >
-                      ❤️ Favorite
-                    </button>
+                <div className="flex justify-between border-b border-gray-800 pb-2">
+                  <span>Release Date</span>
+                  <span className="text-white">
+                    {selectedTrack.releaseDate}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Popularity</span>
+                  <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500"
+                      style={{ width: `${selectedTrack.popularity}%` }}
+                    ></div>
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+              <div className="flex gap-4 mt-auto">
+                <button
+                  onClick={() => setPlayingTrack(selectedTrack.playableId)}
+                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg font-bold shadow-lg"
+                >
+                  Play Now
+                </button>
+                <button
+                  onClick={() => initiateTrackFavorite(selectedTrack)}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
+                >
+                  ❤️ Favorite
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -458,7 +571,7 @@ const Home = () => {
               Login required
             </h3>
             <p className="text-gray-300 text-sm mb-6">
-              You need to be logged in to add tracks to your favorites.
+              You need to be logged in to add to your favorites.
             </p>
             <div className="flex gap-3">
               <button
@@ -491,7 +604,6 @@ const Home = () => {
                 width="100%"
                 height="80"
                 frameBorder="0"
-                allowFullScreen=""
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
                 title="Spotify Player"
