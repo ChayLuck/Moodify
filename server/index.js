@@ -9,6 +9,7 @@ const contentRoutes = require('./routes/contentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const songRoutes = require('./routes/songRoutes');
 const movieRoutes = require('./routes/movieRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 
 dotenv.config();
 connectDB();
@@ -23,6 +24,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/songs', songRoutes);
 app.use('/api/movies', movieRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 app.get('/', (req, res) => {
     res.send('Moodify API Çalışıyor! 🚀');
