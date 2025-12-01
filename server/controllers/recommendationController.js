@@ -40,7 +40,7 @@ const getRecommendations = async (req, res) => {
         // 🎵 1. MÜZİK TAVSİYESİ
         // ---------------------------------------------------------
         let searchQuery = config.keyword; 
-        let musicNote = "Popüler öneri";
+        let musicNote = "Popular recommendation";
         let usedPersonalization = false;
 
         // A. Kişiselleştirme Denemesi
@@ -56,7 +56,7 @@ const getRecommendations = async (req, res) => {
                 const trackInDb = await Track.findOne({ spotifyId: seedFav.spotifyId });
                 if (trackInDb && trackInDb.artist) {
                     searchQuery = `${trackInDb.artist} ${mood}`;
-                    musicNote = `Favorin "${trackInDb.title}" tarzında`;
+                    musicNote = `Similar to "${trackInDb.title}" in your favorites`;
                     usedPersonalization = true;
                 }
             }
@@ -115,7 +115,7 @@ const getRecommendations = async (req, res) => {
         // 🎬 2. FİLM TAVSİYESİ (GÜVENLİ)
         // ---------------------------------------------------------
         let movieUrl = "";
-        let movieNote = "Popüler film";
+        let movieNote = "Popular film";
         let movieResults = [];
 
         const matchingMovies = user.favoriteMovies ? user.favoriteMovies.filter(m => m.mood === mood) : [];
@@ -124,7 +124,7 @@ const getRecommendations = async (req, res) => {
         if (matchingMovies.length > 0) {
             const seedMovie = matchingMovies[Math.floor(Math.random() * matchingMovies.length)];
             movieUrl = `https://api.themoviedb.org/3/movie/${seedMovie.tmdbId}/recommendations?api_key=${process.env.TMDB_API_KEY}&language=en-US&page=1`;
-            movieNote = "Beğendiğin filmlere benzer";
+            movieNote = "Similar to the movies in your favorites";
             
             try {
                 const tmdbRes = await axios.get(movieUrl);
