@@ -192,4 +192,90 @@ const getRecommendations = async (req, res) => {
     }
 };
 
-module.exports = { getRecommendations };
+// ============================================================
+// 🤖 AI CHATBOT İÇİN HAFİF ÖNERİ FONKSİYONU (userId YOK, history YOK)
+// GET /api/recommendations/ai/:mood
+// ============================================================
+const getRecommendationsForAI = async (req, res) => {
+    const { mood } = req.params;
+    console.log(`🤖 AI Recommendation çalıştı: ${mood}`);
+
+    try {
+        const config = MOOD_CONFIG[mood];
+        if (!config) {
+            return res.status(400).json({ message: 'Geçersiz Mod' });
+        }
+
+        // --- Spotify Token ---
+        const token = await getSpotifyToken();
+        if (!token) throw new Error("Spotify Token Alınamadı");
+
+        // ============================
+        // 🎵 1) MÜZİK (BASİT ARAMA)
+        // ============================
+        const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+            config.keyword
+        )}&type=track&limit=30`;
+
+        const spotifyRes = await axios.get(spotifyUrl, {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+
+        const tracks = spotifyRes.data.tracks?.items || [];
+        if (tracks.length === 0) {
+            throw new Error("Spotify sonuç döndürmedi (AI).");
+        }
+
+        const trackData = tracks[Math.floor(Math.random() * tracks.length)];
+
+        const aiTrack = {
+            id: trackData.id,
+            name: trackData.name,
+            artist: trackData.artists?.[0]?.name || 'Unknown',
+            image: trackData.album?.images?.[0]?.url,
+            previewUrl: trackData.preview_url,
+            spotifyUrl: trackData.external_urls?.spotify
+        };
+
+        // ============================
+        // 🎬 2) FİLM (BASİT DISCOVER)
+        // ============================
+        const tmdbUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${
+            process.env.TMDB_API_KEY
+        }&with_genres=${config.genreId}&sort_by=popularity.desc&page=1`;
+
+        const tmdbRes = await axios.get(tmdbUrl);
+        const movieResults = tmdbRes.data.results || [];
+
+        const movieData =
+            movieResults[Math.floor(Math.random() * movieResults.length)];
+
+        const aiMovie = movieData
+            ? {
+                  id: movieData.id,
+                  title: movieData.title,
+                  overview: movieData.overview,
+                  poster: movieData.poster_path
+                      ? `https://image.tmdb.org/t/p/w500${movieData.poster_path}`
+                      : null,
+                  rating: movieData.vote_average,
+                  releaseDate: movieData.release_date
+              }
+            : null;
+
+        // History kaydı YOK → sadece direkt öneri dönüyoruz
+        return res.json({
+            fromAI: true,
+            mood,
+            track: aiTrack,
+            movie: aiMovie
+        });
+    } catch (error) {
+        console.error('AI Recommendation Error:', error.message);
+        return res
+            .status(500)
+            .json({ message: 'AI tavsiyesi alınamadı' });
+    }
+};
+
+module.exports = { getRecommendations, getRecommendationsForAI };
