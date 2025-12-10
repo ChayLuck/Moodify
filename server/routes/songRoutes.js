@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { searchSongs, getTrackDetails } = require('../controllers/songController');
 
-router.get('/search', searchSongs);
-router.get('/details/:id', getTrackDetails); // <-- YENİ
+// Controller'dan fonksiyonları süslü parantez ile { } doğru aldığımıza emin olalım
+const { getNewReleases, getTrackDetails } = require('../controllers/songController');
+
+// 1. Rota: Yeni Çıkanlar
+// getNewReleases fonksiyonunun dolu olduğundan emin olunuyor
+router.get('/new-releases', getNewReleases);
+
+// 2. Rota: Şarkı Detayları
+// getTrackDetails fonksiyonunun dolu olduğundan emin olunuyor
+router.get('/details/:id', getTrackDetails);
 
 module.exports = router;

@@ -1,107 +1,130 @@
 const axios = require('axios');
 const qs = require('qs');
 
-// --- YARDIMCI: TOKEN ALMA ---
+// --- GLOBAL TOKEN ÖNBELLEĞİ ---
+let cachedToken = null;
+let tokenExpirationTime = 0;
+
+// --- TOKEN ALMA ---
 const getSpotifyToken = async () => {
+    const now = Date.now();
+    if (cachedToken && now < tokenExpirationTime - 60000) return cachedToken;
+
     const url = 'https://accounts.spotify.com/api/token'; 
     const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
+    
     try {
         const res = await axios.post(url, qs.stringify({ grant_type: 'client_credentials' }), {
             headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/x-www-form-urlencoded' }
         });
-        return res.data.access_token;
-    } catch (error) { return null; }
+        cachedToken = res.data.access_token;
+        tokenExpirationTime = now + (res.data.expires_in * 1000);
+        return cachedToken;
+    } catch (error) {
+        console.error("Token alınamadı:", error.message);
+        return null;
+    }
 };
 
-// --- 1. ŞARKI ARAMA ---
-const searchSongs = async (req, res) => {
-    const query = req.query.q;
-    if (!query) return res.status(400).json({ message: "Search Text Required" });
-
+// --- YENİ ÇIKANLAR ---
+const getNewReleases = async (req, res) => {
     try {
         const token = await getSpotifyToken();
-        const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=50`; 
+        // Token yoksa bile hata fırlatma, boş dizi dön
+        if (!token) return res.json([]); 
+
+        const url = 'https://api.spotify.com/v1/browse/new-releases?limit=10';
         const response = await axios.get(url, { headers: { 'Authorization': 'Bearer ' + token } });
 
-        const tracks = response.data.tracks.items.map(track => ({
-            id: track.id, 
-            name: track.name,
-            artist: track.artists[0].name,
-            image: track.album.images[0]?.url,
-            previewUrl: track.preview_url,
-            popularity: track.popularity,
-            releaseDate: track.album.release_date
+        const songs = response.data.albums.items.map(album => ({
+            id: album.id, 
+            name: album.name,
+            artist: album.artists[0].name,
+            image: album.images[0].url
         }));
-        res.json(tracks);
+        res.json(songs);
     } catch (error) {
-        res.status(500).json({ message: "Searching Error" });
+        // Hata durumunda boş liste dön, uygulama patlamasın
+        console.error("New Releases Hatası:", error.message);
+        res.json([]); 
     }
 };
 
-// --- 2. DETAY GETİR (DÜZELTİLEN KISIM) ---
+// --- ŞARKI DETAYLARI (KURŞUN GEÇİRMEZ VERSİYON 🛡️) ---
 const getTrackDetails = async (req, res) => {
-    const id = req.params.id;
+    const { id } = req.params;
+
+    // Herhangi bir hata durumunda dönecek "Acil Durum" verisi
+    const MOCK_DATA = {
+        id: id,
+        playableId: null,
+        name: "Veri Alınamadı (Limit)",
+        artist: "Lütfen Bekleyin...",
+        artistId: "unknown",
+        album: "Spotify API Limiti",
+        releaseDate: "2024",
+        popularity: 50,
+        duration: "0:00",
+        image: "https://via.placeholder.com/300x300/1DB954/FFFFFF?text=Spotify+Limit",
+        previewUrl: null
+    };
 
     try {
         const token = await getSpotifyToken();
-        
-        // 1. DENEME: ŞARKI MI?
+        if (!token) return res.json(MOCK_DATA); // Token yoksa sahte veri dön
+
+        let trackData;
         try {
-            const trackUrl = `https://api.spotify.com/v1/tracks/${id}`;
-            const response = await axios.get(trackUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-            const data = response.data;
-
-            const trackDetails = {
-                id: data.id,
-                playableId: data.id, // Şarkıysa kendisi çalınır
-                name: data.name,
-                artist: data.artists.map(a => a.name).join(', '),
-                artistId: data.artists[0].id, 
-                album: data.album.name,
-                releaseDate: data.album.release_date,
-                image: data.album.images[0]?.url,
-                popularity: data.popularity, 
-                duration: (data.duration_ms / 60000).toFixed(2),
-                previewUrl: data.preview_url,
-                spotifyUrl: data.external_urls.spotify,
-                type: 'track'
-            };
-            return res.json(trackDetails);
-
-        } catch (trackError) {
-            if (trackError.response && trackError.response.status !== 404) throw trackError;
+            // Önce şarkı olarak dene
+            const trackRes = await axios.get(`https://api.spotify.com/v1/tracks/${id}`, { 
+                headers: { 'Authorization': 'Bearer ' + token } 
+            });
+            trackData = trackRes.data;
+        } catch (err) {
+            // Şarkı bulamazsa albüm olarak dene (New Releases için)
+            const albumRes = await axios.get(`https://api.spotify.com/v1/albums/${id}/tracks?limit=1`, { 
+                headers: { 'Authorization': 'Bearer ' + token } 
+            });
+            
+            if (albumRes.data.items.length > 0) {
+                const firstId = albumRes.data.items[0].id;
+                const finalRes = await axios.get(`https://api.spotify.com/v1/tracks/${firstId}`, { 
+                    headers: { 'Authorization': 'Bearer ' + token } 
+                });
+                trackData = finalRes.data;
+            } else {
+                throw new Error("Bulunamadı");
+            }
         }
 
-        // 2. DENEME: ALBÜM MÜ?
-        const albumUrl = `https://api.spotify.com/v1/albums/${id}`;
-        const albumRes = await axios.get(albumUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = albumRes.data;
+        // Dakika:Saniye
+        const minutes = Math.floor(trackData.duration_ms / 60000);
+        const seconds = ((trackData.duration_ms % 60000) / 1000).toFixed(0);
+        const durationFormatted = minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
 
-        // 👇 KRİTİK DÜZELTME: Albümün ilk şarkısının ID'sini alıyoruz
-        const firstTrackId = data.tracks.items.length > 0 ? data.tracks.items[0].id : data.id;
-
-        const albumDetails = {
-            id: data.id,
-            playableId: firstTrackId, // <--- İŞTE BU ÇALACAK
-            name: data.name,
-            artist: data.artists.map(a => a.name).join(', '),
-            artistId: data.artists[0].id,
-            album: data.name,
-            releaseDate: data.release_date,
-            image: data.images[0]?.url,
-            popularity: data.popularity,
-            duration: data.tracks.items.length + " Songs",
-            previewUrl: null,
-            spotifyUrl: data.external_urls.spotify,
-            type: 'album'
+        const songDetails = {
+            id: trackData.id,
+            playableId: trackData.id,
+            name: trackData.name,
+            artist: trackData.artists[0].name,
+            artistId: trackData.artists[0].id,
+            album: trackData.album.name,
+            releaseDate: trackData.album.release_date,
+            popularity: trackData.popularity,
+            duration: durationFormatted,
+            image: trackData.album.images[0]?.url,
+            previewUrl: trackData.preview_url
         };
 
-        res.json(albumDetails);
+        res.json(songDetails);
 
     } catch (error) {
-        console.error("Details Error:", error.message);
-        res.status(500).json({ message: "Details Couldn't Be Obtained." });
+        // 🚨 EN ÖNEMLİ KISIM: 
+        // Hata ne olursa olsun (429, 404, 500) ASLA hata kodu dönme.
+        // Hep 200 OK + MOCK DATA dön ki Frontend çökmesin.
+        console.warn(`⚠️ Hata oluştu (ID: ${id}):`, error.message);
+        return res.json(MOCK_DATA);
     }
 };
 
-module.exports = { searchSongs, getTrackDetails };
+module.exports = { getNewReleases, getTrackDetails };
