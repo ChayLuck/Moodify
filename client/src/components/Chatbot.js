@@ -5,7 +5,7 @@ export default function Chatbot({ onClose }) {
   const [messages, setMessages] = useState([
     {
       sender: "bot",
-      text: "Hey! Tell me your mood and I'll recommend the perfect music & movie 🎶🎬"
+      text: "Hey! Tell me how you feel and I’ll recommend music & movies 🎶🎬"
     }
   ]);
 
@@ -17,15 +17,13 @@ export default function Chatbot({ onClose }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Mood → Emoji Map
   const moodEmoji = {
     happy: "😊",
     sad: "😢",
     romantic: "💗",
     chill: "❄️",
-    energized: "⚡",
-    angry: "🔥",
-    default: "🎵",
+    energetic: "⚡",
+    default: "🎵"
   };
 
   const sendMessage = async () => {
@@ -37,22 +35,32 @@ export default function Chatbot({ onClose }) {
     setLoading(true);
 
     try {
-      // 1) AI mood detection
+      // 1️⃣ AI CHAT
       const aiRes = await axios.post("http://localhost:5000/api/ai/chat", {
-        message: userMessage.text,
+        message: userMessage.text
       });
 
+      // 🔴 BELİRSİZ → SADECE BOT MESAJI
+      if (aiRes.data.type === "clarify") {
+        setMessages(prev => [
+          ...prev,
+          { sender: "bot", text: aiRes.data.message }
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // 🟢 NET MOOD
       const { mood } = aiRes.data;
       const emoji = moodEmoji[mood?.toLowerCase()] || moodEmoji.default;
 
-      // 2) Fetch recommendations
+      // 2️⃣ RECOMMENDATIONS
       const recRes = await axios.get(
         `http://localhost:5000/api/recommendations/ai/${mood}`
       );
 
       const { track, movie } = recRes.data;
 
-      // 3) Add recommendation bubble only
       setMessages(prev => [
         ...prev,
         { sender: "recommendation", mood, emoji, track, movie }
@@ -61,7 +69,7 @@ export default function Chatbot({ onClose }) {
     } catch (err) {
       setMessages(prev => [
         ...prev,
-        { sender: "bot", text: "Sorry, I couldn't load recommendations right now." }
+        { sender: "bot", text: "Sorry, something went wrong 😕" }
       ]);
     }
 
@@ -69,46 +77,36 @@ export default function Chatbot({ onClose }) {
   };
 
   return (
-    <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[520px] rounded-2xl shadow-2xl bg-gray-900 text-white border border-gray-700 flex flex-col animate-slide-up">
+    <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[520px] rounded-2xl shadow-2xl bg-gray-900 text-white border border-gray-700 flex flex-col">
 
       {/* HEADER */}
-      <div className="bg-gray-800 px-4 py-3 flex items-center gap-3 rounded-t-2xl border-b border-gray-700">
+      <div className="bg-gray-800 px-4 py-3 flex items-center gap-3 border-b border-gray-700">
         <img src="/bot.png" className="w-8 h-8" alt="bot" />
         <h2 className="text-lg font-bold">Moodify Assistant</h2>
-
-        <button
-          onClick={onClose}
-          className="ml-auto text-gray-300 hover:text-white text-xl"
-        >
-          ×
-        </button>
+        <button onClick={onClose} className="ml-auto text-xl">×</button>
       </div>
 
-      {/* CHAT AREA */}
+      {/* CHAT */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, idx) => (
           <ChatBubble key={idx} msg={msg} />
         ))}
-
-        {loading && (
-          <div className="text-indigo-400 animate-pulse">Thinking...</div>
-        )}
-
-        <div ref={chatEndRef}></div>
+        {loading && <div className="text-indigo-400 animate-pulse">Thinking...</div>}
+        <div ref={chatEndRef} />
       </div>
 
       {/* INPUT */}
-      <div className="p-3 bg-gray-800 flex gap-2 rounded-b-2xl">
+      <div className="p-3 bg-gray-800 flex gap-2">
         <input
           className="flex-1 bg-gray-700 px-3 py-2 rounded-xl outline-none"
-          placeholder="Tell me your mood..."
+          placeholder="Tell me more..."
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && sendMessage()}
         />
         <button
           onClick={sendMessage}
-          className="bg-indigo-500 px-4 py-2 rounded-xl hover:bg-indigo-600 transition"
+          className="bg-indigo-500 px-4 py-2 rounded-xl"
         >
           Send
         </button>
@@ -117,12 +115,12 @@ export default function Chatbot({ onClose }) {
   );
 }
 
-/* MESSAGE COMPONENTS */
+/* CHAT BUBBLES */
 function ChatBubble({ msg }) {
   if (msg.sender === "user") {
     return (
       <div className="text-right">
-        <div className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-md">
+        <div className="inline-block bg-indigo-600 px-4 py-2 rounded-xl">
           {msg.text}
         </div>
       </div>
@@ -132,7 +130,7 @@ function ChatBubble({ msg }) {
   if (msg.sender === "bot") {
     return (
       <div className="text-left">
-        <div className="inline-block bg-gray-700 px-4 py-2 rounded-xl shadow-md text-gray-100">
+        <div className="inline-block bg-gray-700 px-4 py-2 rounded-xl">
           {msg.text}
         </div>
       </div>
@@ -142,32 +140,20 @@ function ChatBubble({ msg }) {
   if (msg.sender === "recommendation") {
     return (
       <div className="space-y-3">
-
-        {/* Emoji + Mood */}
-        <div className="text-indigo-300 font-semibold text-sm tracking-wide">
-          {msg.emoji} Recommendations for: {msg.mood}
+        <div className="text-indigo-300 font-semibold text-sm">
+          {msg.emoji} Recommendations for {msg.mood}
         </div>
 
-        {/* MUSIC CARD */}
-        <div className="bg-gray-800 rounded-xl p-3 flex gap-3 shadow-lg hover:scale-[1.02] transition">
-          <img
-            src={msg.track.image}
-            className="w-16 h-16 rounded-xl object-cover"
-            alt=""
-          />
+        <div className="bg-gray-800 p-3 rounded-xl flex gap-3">
+          <img src={msg.track.image} className="w-16 h-16 rounded-xl" />
           <div>
             <p className="font-bold">{msg.track.name}</p>
             <p className="text-gray-400 text-sm">{msg.track.artist}</p>
           </div>
         </div>
 
-        {/* MOVIE CARD */}
-        <div className="bg-gray-800 rounded-xl p-3 flex gap-3 shadow-lg hover:scale-[1.02] transition">
-          <img
-            src={msg.movie.poster}
-            className="w-16 h-20 rounded-xl object-cover"
-            alt=""
-          />
+        <div className="bg-gray-800 p-3 rounded-xl flex gap-3">
+          <img src={msg.movie.poster} className="w-16 h-20 rounded-xl" />
           <div>
             <p className="font-bold">{msg.movie.title}</p>
             <p className="text-gray-400 text-xs line-clamp-3">
@@ -175,7 +161,6 @@ function ChatBubble({ msg }) {
             </p>
           </div>
         </div>
-
       </div>
     );
   }

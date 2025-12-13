@@ -1,45 +1,75 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { detectMoodLocally } = require("./localMoodDetector");
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function analyzeMoodFromText(text) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  if (!text || !text.trim()) {
+    return {
+      type: "clarify",
+      message: "Please tell me how you feel 🙂"
+    };
+  }
 
-  const prompt = `
-Return ONLY JSON. No markdown. No code block. No explanation outside JSON.
+  /* 1️⃣ LOCAL MOOD (TEK KAYNAK) */
+  const localResult = detectMoodLocally(text);
+  if (localResult) {
+    console.log("🟢 LOCAL MOOD:", localResult);
+    return localResult;
+  }
+
+  /* 2️⃣ ANLAMSIZ ÇOK KISA GİRİŞLER */
+  const wordCount = text.trim().split(/\s+/).length;
+  if (wordCount === 1 && text.trim().length <= 3) {
+    return {
+      type: "clarify",
+      message: "Can you describe your mood a bit more? 🙂"
+    };
+  }
+
+  /* 3️⃣ AI (SADECE GEREKİRSE) */
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+Return ONLY JSON. No markdown. No explanation.
 
 Valid moods: ["Happy","Sad","Energetic","Chill","Romantic"]
 
 User message: "${text}"
 
-Respond ONLY like this:
-{"mood":"Chill","confidence":75,"explanation":"short reason"}
+{"mood":"Happy","confidence":80}
 `;
 
-  try {
     const result = await model.generateContent(prompt);
     let raw = result.response.text().trim();
 
-    console.log("\n🔵 RAW AI OUTPUT:", raw);
-
-    // ---------- AI JSON Temizleyici ----------
-    // backtick varsa temizle
     raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-
-    // JSON olmayan baş / son yazıları temizle
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) raw = jsonMatch[0];
 
-    console.log("🟢 CLEAN JSON:", raw);
+    const parsed = JSON.parse(raw);
 
-    return JSON.parse(raw);
+    // 🔒 Güvenlik: sistemde olmayan mood gelirse
+    const allowedMoods = ["Happy", "Sad", "Energetic", "Chill", "Romantic"];
+    let finalMood = parsed.mood;
 
-  } catch (err) {
-    console.log("❌ JSON Parse Error:", err);
+    if (!allowedMoods.includes(finalMood)) {
+      finalMood = "Chill";
+    }
 
     return {
-      mood: "Chill",
-      confidence: 50,
-      explanation: "Fallback mood (AI parse error)."
+      mood: finalMood,
+      confidence: parsed.confidence || 70,
+      source: "ai"
+    };
+
+  } catch (err) {
+    console.error("❌ AI ERROR / QUOTA:", err.message);
+    return {
+      type: "clarify",
+      message:
+        "I’m having trouble analyzing that right now 🤖 Can you describe your mood a bit more?"
     };
   }
 }

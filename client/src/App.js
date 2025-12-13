@@ -19,10 +19,13 @@ function AppContent() {
 
   const location = useLocation();
 
+  // 🔴 LOGIN DURUMU
+  const isLoggedIn = Boolean(localStorage.getItem("user"));
+
   // Chatbot'un görünmemesi gereken sayfalar
   const hideChatbotRoutes = ["/login", "/signup"];
 
-  const shouldShowChatbot = !hideChatbotRoutes.includes(location.pathname);
+  const shouldShowChatbot = Boolean(localStorage.getItem("user")) && !hideChatbotRoutes.includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-800 relative">
