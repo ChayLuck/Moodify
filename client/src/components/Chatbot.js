@@ -77,17 +77,17 @@ export default function Chatbot({ onClose }) {
   };
 
   return (
-    <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[520px] rounded-2xl shadow-2xl bg-gray-900 text-white border border-gray-700 flex flex-col">
+    <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[520px] rounded-2xl shadow-2xl bg-mainBg  flex flex-col">
 
       {/* HEADER */}
-      <div className="bg-gray-800 px-4 py-3 flex items-center gap-3 border-b border-gray-700">
+      <div className="bg-mainBg text-mainText px-4 py-3 flex items-center gap-3 border-b border-gray-700">
         <img src="/bot.png" className="w-8 h-8" alt="bot" />
         <h2 className="text-lg font-bold">Moodify Assistant</h2>
         <button onClick={onClose} className="ml-auto text-xl">×</button>
       </div>
 
       {/* CHAT */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className=" text-mainText flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, idx) => (
           <ChatBubble key={idx} msg={msg} />
         ))}
@@ -96,9 +96,9 @@ export default function Chatbot({ onClose }) {
       </div>
 
       {/* INPUT */}
-      <div className="p-3 bg-gray-800 flex gap-2">
+      <div className="p-3 bg-mainBg flex gap-2">
         <input
-          className="flex-1 bg-gray-700 px-3 py-2 rounded-xl outline-none"
+          className="flex-1 text-white bg-gray-700 px-3 py-2 rounded-xl outline-none"
           placeholder="Tell me more..."
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -106,7 +106,7 @@ export default function Chatbot({ onClose }) {
         />
         <button
           onClick={sendMessage}
-          className="bg-indigo-500 px-4 py-2 rounded-xl"
+          className="bg-indigo-500 text-white px-4 py-2 rounded-xl"
         >
           Send
         </button>
@@ -120,7 +120,7 @@ function ChatBubble({ msg }) {
   if (msg.sender === "user") {
     return (
       <div className="text-right">
-        <div className="inline-block bg-indigo-600 px-4 py-2 rounded-xl">
+        <div className="inline-block text-white bg-indigo-600 px-4 py-2 rounded-xl">
           {msg.text}
         </div>
       </div>
@@ -130,7 +130,7 @@ function ChatBubble({ msg }) {
   if (msg.sender === "bot") {
     return (
       <div className="text-left">
-        <div className="inline-block bg-gray-700 px-4 py-2 rounded-xl">
+        <div className="inline-block bg-cardBg px-4 py-2 rounded-xl">
           {msg.text}
         </div>
       </div>
@@ -147,7 +147,7 @@ function ChatBubble({ msg }) {
         <div className="bg-gray-800 p-3 rounded-xl flex gap-3">
           <img src={msg.track.image} className="w-16 h-16 rounded-xl" />
           <div>
-            <p className="font-bold">{msg.track.name}</p>
+            <p className="font-bold text-white">{msg.track.name}</p>
             <p className="text-gray-400 text-sm">{msg.track.artist}</p>
           </div>
         </div>
@@ -155,7 +155,7 @@ function ChatBubble({ msg }) {
         <div className="bg-gray-800 p-3 rounded-xl flex gap-3">
           <img src={msg.movie.poster} className="w-16 h-20 rounded-xl" />
           <div>
-            <p className="font-bold">{msg.movie.title}</p>
+            <p className="font-bold text-white">{msg.movie.title}</p>
             <p className="text-gray-400 text-xs line-clamp-3">
               {msg.movie.overview}
             </p>

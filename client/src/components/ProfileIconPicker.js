@@ -18,7 +18,7 @@ export default function ProfileIconPicker({ onSelect }) {
           src={icon}
           alt="Profile Avatar"
           onClick={() => onSelect(icon)}
-          className="w-24 h-24 cursor-pointer rounded-full object-cover border border-gray-700 hover:border-green-400 hover:scale-110 transition"
+          className="w-24 h-24 cursor-pointer rounded-full object-cover border border-gray-700 hover:border-indigo-400 hover:scale-110 transition"
         />
       ))}
     </div>

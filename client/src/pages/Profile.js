@@ -401,10 +401,10 @@ const Profile = () => {
     );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
+    <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
         {/* HEADER */}
-        <div className="bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-700 mb-10">
+        <div className="bg-mainBg rounded-xl overflow-hidden border border-indigo-900/40 shadow-2xl mb-10">
           <div className="h-32 bg-gradient-to-r from-indigo-400 to-indigo-900"></div>
           <div className="px-8 pb-8 text-center relative">
             <div className="relative -top-12 inline-block">
@@ -430,17 +430,17 @@ const Profile = () => {
         </div>
 
         {/* --- MOOD HISTORY SECTION (TABS'İN HEMEN ÜSTÜ) --- */}
-        <section className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 rounded-2xl border border-indigo-900/40 p-6 mb-8 shadow-[0_0_40px_rgba(79,70,229,0.25)]">
+        <section className="bg-mainBg rounded-2xl border border-indigo-900/40 p-6 mb-8 shadow-[0_0_40px_rgba(79,70,229,0.25)]">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <h2 className="text-xl font-semibold  flex items-center gap-2">
                 Mood History
               </h2>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm mt-1">
                 Your last 7 days of mood-based activity.
               </p>
             </div>
-            <span className="text-xs md:text-sm text-gray-400 bg-gray-900/60 px-3 py-1 rounded-full border border-gray-700/70">
+            <span className="text-xs md:text-sm  px-3 py-1 rounded-full border border-gray-700/70">
               Last 7 days
             </span>
           </div>
@@ -456,23 +456,23 @@ const Profile = () => {
             <>
               {/* üstte istatistik kartları */}
               {moodStats && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-mainBg grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   {/* total */}
-                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80 flex flex-col justify-between">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                  <div className="rounded-xl p-4 border border-gray-700/80 flex flex-col justify-between">
+                    <p className="text-[10px]  uppercase tracking-[0.12em]">
                       Total Mood Entries
                     </p>
-                    <p className="text-3xl font-bold text-white mt-2">
+                    <p className="text-3xl font-bold  mt-2">
                       {moodStats.total}
                     </p>
-                    <p className="text-[11px] text-gray-500 mt-1">
+                    <p className="text-[11px] mt-1">
                       Every selection from your dashboard is tracked here.
                     </p>
                   </div>
 
                   {/* last mood */}
-                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                  <div className="bg-mainbg rounded-xl p-4 border border-gray-700/80">
+                    <p className="text-[10px] uppercase tracking-[0.12em]">
                       Last Mood
                     </p>
                     {moodStats.lastMood ? (
@@ -489,16 +489,16 @@ const Profile = () => {
                         </span>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-400 mt-2">-</p>
+                      <p className="text-sm mt-2">-</p>
                     )}
-                    <p className="text-[11px] text-gray-500 mt-2">
+                    <p className="text-[11px] mt-2">
                       Your most recent mood selection.
                     </p>
                   </div>
 
                   {/* most frequent */}
-                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                  <div className="bg-mainBg rounded-xl p-4 border border-gray-700/80">
+                    <p className="text-[10px] uppercase tracking-[0.12em]">
                       Most Frequent Mood
                     </p>
                     <div className="mt-3 flex items-center gap-2">
@@ -507,11 +507,11 @@ const Profile = () => {
                           getMostFrequentMood(moodStats.moodCounts)
                         )}
                       </span>
-                      <p className="text-lg font-semibold text-white capitalize">
+                      <p className="text-lg mt-2 font-semibold capitalize">
                         {getMostFrequentMood(moodStats.moodCounts)}
                       </p>
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-2">
+                    <p className="text-[11px]  mt-3">
                       The mood you choose the most.
                     </p>
                   </div>
@@ -528,20 +528,20 @@ const Profile = () => {
                     <div
                       key={entry._id}
                       onClick={() => setSelectedMoodEntry(entry)}
-                      className="cursor-pointer relative pl-8 pr-3 py-2 rounded-lg hover:bg-gray-900/80 transition border border-transparent hover:border-gray-700/70"
+                      className="cursor-pointer relative pl-8 pr-3 py-2 rounded-lg transition border border-transparent"
                     >
                       {/* nokta */}
-                      <span className="absolute left-1.5 top-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.9)]" />
+                      <span className="absolute left-1.5 top-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-2xl" />
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                           <span className="text-lg">
                             {getMoodEmoji(entry.mood)}
                           </span>
-                          <span className="text-sm text-white capitalize font-medium">
+                          <span className="text-sm hover:text-indigo-400 capitalize font-medium">
                             {entry.mood}
                           </span>
                         </div>
-                        <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                        <span className="text-[11px]  whitespace-nowrap">
                           {new Date(entry.createdAt).toLocaleString()}
                         </span>
                       </div>
@@ -579,19 +579,19 @@ const Profile = () => {
 
         {/* INFO BAR */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-          <h2 className="text-xl text-gray-300">
+          <h2 className="text-xl">
             You have{" "}
-            <span className="text-white font-bold">
+            <span className="text-indigo-400 font-bold">
               {itemsToDisplay.length}
             </span>{" "}
             {activeTab === "tracks" ? "songs" : "movies"} in favorites.
           </h2>
           <div className="flex items-center gap-2 mt-4 md:mt-0">
-            <span className="text-sm text-gray-400">Sort By:</span>
+            <span className="text-sm ">Sort By:</span>
             <select
               value={sortType}
               onChange={handleSortChange}
-              className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm cursor-pointer"
+              className="bg-mainBg border border-gray-600 rounded-lg px-3 py-2 text-sm cursor-pointer"
             >
               {activeTab === "tracks" ? (
                 <>
@@ -623,7 +623,7 @@ const Profile = () => {
               <div
                 key={item._id}
                 onClick={() => openItemModal(item)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
+                className="bg-mainBg rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
               >
                 <div className="relative aspect-square">
                   <img
@@ -642,10 +642,10 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="font-bold text-white truncate group-hover:text-indigo-400">
+                  <h3 className="font-bold truncate group-hover:text-indigo-400">
                     {item.title}
                   </h3>
-                  <p className="text-gray-400 text-xs truncate">
+                  <p className=" text-xs truncate">
                     {activeTab === "tracks"
                       ? item.artist
                       : item.releaseDate?.substring(0, 4)}

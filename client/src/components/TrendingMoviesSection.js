@@ -23,7 +23,7 @@ const TrendingMoviesSection = ({
             <div
               key={movie.id}
               onClick={() => onMovieClick && onMovieClick(movie)}
-              className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+              className="bg-cardBg text-mainText rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
             >
               <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
                 {movie.poster ? (
@@ -45,7 +45,7 @@ const TrendingMoviesSection = ({
               </div>
 
               <div className="p-4">
-                <h3 className="font-bold truncate text-lg text-white group-hover:text-yellow-400 transition">
+                <h3 className="font-bold truncate text-lg  group-hover:text-yellow-400 transition">
                   {movie.title}
                 </h3>
                 {movie.releaseDate && (

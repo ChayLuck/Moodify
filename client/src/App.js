@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -9,6 +14,7 @@ import Songs from "./pages/Songs";
 import Movies from "./pages/Movies";
 import { ToastProvider } from "./context/ToastContext";
 import Chatbot from "./components/Chatbot";
+import { ThemeProvider } from "./context/ThemeContext";
 
 import { useState } from "react";
 
@@ -25,7 +31,9 @@ function AppContent() {
   // Chatbot'un görünmemesi gereken sayfalar
   const hideChatbotRoutes = ["/login", "/signup"];
 
-  const shouldShowChatbot = Boolean(localStorage.getItem("user")) && !hideChatbotRoutes.includes(location.pathname);
+  const shouldShowChatbot =
+    Boolean(localStorage.getItem("user")) &&
+    !hideChatbotRoutes.includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-800 relative">
@@ -83,11 +91,7 @@ function AppContent() {
           </div>
 
           {/* Chatbot Panel */}
-          {openChat && (
-            <Chatbot
-              onClose={() => setOpenChat(false)}
-            />
-          )}
+          {openChat && <Chatbot onClose={() => setOpenChat(false)} />}
         </>
       )}
     </div>
@@ -97,11 +101,13 @@ function AppContent() {
 // Router + ToastProvider burada sarıyor
 function App() {
   return (
-    <ToastProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

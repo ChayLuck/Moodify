@@ -23,7 +23,7 @@ const MovieDetailModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
+        className="bg-mainBg rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         {/* CLOSE (X) BUTTON */}
@@ -50,7 +50,7 @@ const MovieDetailModal = ({
 
             {/* CONTENT */}
             <div className="w-full md:w-2/3 p-8 flex flex-col">
-              <h2 className="text-3xl font-bold text-white mb-2">
+              <h2 className="text-3xl font-bold mb-2">
                 {movie.title}
               </h2>
 
@@ -67,20 +67,20 @@ const MovieDetailModal = ({
               </div>
 
               {/* Overview */}
-              <p className="text-gray-300 leading-relaxed mb-6">
+              <p className="leading-relaxed mb-6">
                 {movie.overview}
               </p>
 
               {/* Director + Cast */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
+                  <h4 className="font-bold mb-2 border-b border-gray-700 pb-1">
                     Director
                   </h4>
-                  <p className="text-gray-300">{movie.director}</p>
+                  <p>{movie.director}</p>
                 </div>
                 <div>
-                  <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
+                  <h4 className="font-bold mb-2 border-b border-gray-700 pb-1">
                     Cast
                   </h4>
                   <div className="flex flex-col gap-2">
@@ -91,7 +91,7 @@ const MovieDetailModal = ({
                           alt={actor.name}
                           className="w-8 h-8 rounded-full object-cover"
                         />
-                        <div className="text-sm text-white">{actor.name}</div>
+                        <div className="text-sm">{actor.name}</div>
                       </div>
                     ))}
                   </div>
@@ -101,7 +101,7 @@ const MovieDetailModal = ({
               {/* MOOD SATIRI (sadece Profile için, props gelirse) */}
               {moodLabel && onChangeMood && (
                 <div className="flex justify-between pt-4 items-center mb-6">
-                  <span className="text-gray-300">Mood</span>
+                  <span className="">Mood</span>
                   <button
                     onClick={onChangeMood}
                     className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${moodColorClass}`}

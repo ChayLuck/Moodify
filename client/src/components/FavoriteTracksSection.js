@@ -18,7 +18,7 @@ const FavoriteTracksSection = ({
           <div
             key={fav._id}
             onClick={() => onTrackClick && onTrackClick(fav)}
-            className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
+            className="bg-mainBg rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
           >
             <div className="relative aspect-square overflow-hidden">
               <img
@@ -37,7 +37,7 @@ const FavoriteTracksSection = ({
               )}
             </div>
             <div className="p-4">
-              <h3 className="font-bold truncate text-lg text-white group-hover:text-indigo-400 transition">
+              <h3 className="font-bold truncate text-lg text-mainText group-hover:text-indigo-400 transition">
                 {fav.title}
               </h3>
               <p className="text-gray-400 text-sm truncate">{fav.artist}</p>

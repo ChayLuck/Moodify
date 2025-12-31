@@ -16,7 +16,7 @@ const TrailerModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-xl w-full max-w-4xl p-4 relative border border-gray-700 shadow-2xl"
+        className="bg-mainBg rounded-xl w-full max-w-4xl p-4 relative border border-gray-700 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button

@@ -196,10 +196,10 @@ const Songs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
+    <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
-          🎵 <span className="text-white">Discover Songs</span>
+          🎵 <span>Discover Songs</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -210,7 +210,7 @@ const Songs = () => {
           <input
             type="text"
             placeholder="Search for a song..."
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
+            className="w-full p-4 rounded-full bg-indigo-400/20 border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -261,11 +261,11 @@ const Songs = () => {
             </p>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Sort By:</span>
+              <span className="text-sm">Sort By:</span>
               <select
                 value={sortType}
                 onChange={handleSortChange}
-                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 cursor-pointer"
+                className="bg-mainBg border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 cursor-pointer"
               >
                 <option value="relevance">Recommended</option>
                 <option value="popularity_desc">
@@ -285,7 +285,7 @@ const Songs = () => {
               <div
                 key={track.id}
                 onClick={() => fetchDetailsAndOpen(track.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+                className="bg-cardBg rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
               >
                 <div className="relative aspect-square overflow-hidden">
                   <img
@@ -296,10 +296,10 @@ const Songs = () => {
                 </div>
 
                 <div className="p-3">
-                  <h3 className="font-bold text-white truncate group-hover:text-indigo-400">
+                  <h3 className="font-bold text-mainText truncate group-hover:text-indigo-400">
                     {track.name}
                   </h3>
-                  <p className="text-gray-400 text-xs truncate">
+                  <p className="text-gray-500 text-xs truncate">
                     {track.artist}
                   </p>
                 </div>

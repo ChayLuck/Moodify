@@ -47,35 +47,35 @@ const Login = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-900 relative">
+    <div className="flex justify-center items-center h-screen bg-mainBg/90 relative">
       {/* LOGIN CARD */}
-      <div className="bg-gray-800 p-10 rounded-lg shadow-xl w-96 border border-gray-700">
+      <div className="bg-mainBg p-10 rounded-lg shadow-xl w-96 border border-gray-700">
         <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center">
           Login
         </h1>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="text-gray-300 text-sm">E-mail</label>
+            <label className="text-mainText text-sm">E-mail</label>
             <input
               type="email"
               name="email"
               value={email}
               onChange={onChange}
-              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full p-2 mt-1 bg-indigo-400/20 text-mainText rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
               placeholder="sample@gmail.com"
               required
             />
           </div>
 
           <div>
-            <label className="text-gray-300 text-sm">Password</label>
+            <label className="text-mainText text-sm">Password</label>
             <input
               type="password"
               name="password"
               value={password}
               onChange={onChange}
-              className="w-full p-2 mt-1 bg-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full p-2 mt-1 bg-indigo-400/20 text-mainText rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
               placeholder="******"
               required
             />
@@ -89,7 +89,7 @@ const Login = () => {
           </button>
         </form>
 
-        <p className="text-gray-400 text-sm text-center mt-4">
+        <p className="text-mainText text-sm text-center mt-4">
           Don't you have an account?{" "}
           <Link to="/signup" className="text-indigo-400 hover:underline">
             Sign Up

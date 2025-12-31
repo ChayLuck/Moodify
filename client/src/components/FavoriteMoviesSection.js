@@ -18,7 +18,7 @@ const FavoriteMoviesSection = ({
           <div
             key={fav._id}
             onClick={() => onMovieClick && onMovieClick(fav)}
-            className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
+            className="bg-cardBg rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
           >
             <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
               {fav.posterPath || fav.poster ? (
@@ -42,10 +42,10 @@ const FavoriteMoviesSection = ({
               )}
             </div>
             <div className="p-4">
-              <h3 className="font-bold truncate text-lg text-white group-hover:text-indigo-400 transition">
+              <h3 className="font-bold truncate text-lg text-mainText group-hover:text-indigo-400 transition">
                 {fav.title}
               </h3>
-              <p className="text-gray-400 text-sm truncate">
+              <p className="text-mainText text-sm truncate">
                 {fav.releaseDate ? fav.releaseDate.substring(0, 4) : ""}
               </p>
             </div>

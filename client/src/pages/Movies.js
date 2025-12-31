@@ -211,10 +211,10 @@ const Movies = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
+    <div className="min-h-screen bg-mainBg  p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center flex items-center justify-center gap-2">
-          🎬 <span className="text-white">Discover Movies</span>
+        <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
+          🎬 <span>Discover Movies</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -225,7 +225,7 @@ const Movies = () => {
           <input
             type="text"
             placeholder="Search for a movie..."
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
+            className="w-full p-4 rounded-full bg-indigo-400/20 text-mainText border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -276,11 +276,11 @@ const Movies = () => {
               results for "{searchedQuery}"
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Sort By:</span>
+              <span className="text-sm text-mainText">Sort By:</span>
               <select
                 value={sortType}
                 onChange={handleSortChange}
-                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer"
+                className="bg-mainBg text-mainText border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer"
               >
                 <option value="relevance">Recommended</option>
                 <option value="rating_desc">Rating (High to Low)</option>
@@ -299,9 +299,9 @@ const Movies = () => {
               <div
                 key={movie.id}
                 onClick={() => fetchDetailsAndOpen(movie.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+                className="bg-cardBg rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
               >
-                <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-square text bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
                   {movie.poster ? (
                     <img
                       src={movie.poster}
@@ -316,7 +316,7 @@ const Movies = () => {
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">
+                  <h3 className="font-bold text-mainText truncate text-sm group-hover:text-indigo-400">
                     {movie.title}
                   </h3>
                 </div>

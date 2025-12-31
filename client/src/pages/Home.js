@@ -247,7 +247,7 @@ const Home = () => {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white pb-32">
+    <div className="bg-mainBg min-h-screen text-mainText pb-32 transition-colors duration-300">
       {/* HERO SECTION */}
       <div className="relative bg-gradient-to-r from-indigo-500 to-gray-900 py-24 px-6 text-center shadow-2xl">
         <h1 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 animate-pulse">
@@ -334,9 +334,9 @@ const Home = () => {
 
       {/* --- MOOD SELECTION MODAL --- */}
       {showMoodModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
-          <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-2 text-white">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-cardBg text-mainText p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-2 ">
               How does this make you feel?
             </h3>
             <div className="grid grid-cols-2 gap-3 mt-4">
@@ -352,7 +352,7 @@ const Home = () => {
             </div>
             <button
               onClick={() => setShowMoodModal(false)}
-              className="mt-6 text-gray-400 hover:text-white underline text-sm"
+              className="mt-6 underline text-sm"
             >
               Cancel
             </button>
@@ -363,11 +363,11 @@ const Home = () => {
       {/* --- LOGIN REQUIRED MODAL --- */}
       {showLoginPrompt && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[65] p-4 backdrop-blur-md">
-          <div className="bg-gray-900 p-8 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-3 text-white">
+          <div className="bg-mainBg p-8 rounded-2xl max-w-sm w-full border border-gray-700 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-3 text-mainText">
               Login required
             </h3>
-            <p className="text-gray-300 text-sm mb-6">
+            <p className="text-sm mb-6">
               You need to be logged in to add to your favorites.
             </p>
             <div className="flex gap-3">

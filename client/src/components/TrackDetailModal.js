@@ -30,7 +30,7 @@ const TrackDetailModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
+        className="bg-mainBg rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close */}
@@ -65,21 +65,21 @@ const TrackDetailModal = ({
 
             {/* Content */}
             <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
-              <h2 className="text-3xl font-bold text-white mb-2">
+              <h2 className="text-3xl font-bold  mb-2">
                 {title}
               </h2>
               <p className="text-xl text-indigo-400 mb-6">
                 {artist}
               </p>
 
-              <div className="space-y-3 text-gray-300 text-sm mb-8">
+              <div className="space-y-3 text-sm mb-8">
                 <div className="flex justify-between border-b border-gray-800 pb-2">
                   <span>Album</span>
-                  <span className="text-white">{album}</span>
+                  <span>{album}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-800 pb-2">
                   <span>Release Date</span>
-                  <span className="text-white">{releaseDate}</span>
+                  <span>{releaseDate}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Popularity</span>
@@ -95,7 +95,7 @@ const TrackDetailModal = ({
               {/* MOOD SATIRI (Profile için, varsa) */}
               {moodLabel && onChangeMood && (
                 <div className="flex justify-between items-center mb-6">
-                  <span className="text-gray-300">Mood</span>
+                  <span className="">Mood</span>
                   <button
                     onClick={onChangeMood}
                     className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${moodColorClass}`}

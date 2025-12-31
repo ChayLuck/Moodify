@@ -11,7 +11,7 @@ const PlayerBar = ({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 w-full bg-black/90 border-t ${borderColorClass} p-4 backdrop-blur-lg ${zIndexClass} shadow-2xl`}
+      className={`fixed bottom-0 left-0 w-full border-t ${borderColorClass} p-4 backdrop-blur-lg ${zIndexClass} shadow-2xl`}
     >
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
         <div className="flex-1">
