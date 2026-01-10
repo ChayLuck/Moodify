@@ -12,7 +12,6 @@ import TrailerModal from "../components/TrailerModal";
 import TrackDetailModal from "../components/TrackDetailModal";
 import PlayerBar from "../components/PlayerBar";
 
-
 const Home = () => {
   const { showToast } = useToast();
 
@@ -249,20 +248,36 @@ const Home = () => {
   return (
     <div className="bg-mainBg min-h-screen text-mainText pb-32 transition-colors duration-300">
       {/* HERO SECTION */}
-      <div className="relative bg-gradient-to-r from-indigo-500 to-gray-900 py-24 px-6 text-center shadow-2xl">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400 animate-pulse">
-          Moodify
-        </h1>
-        <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
-          Discover movies and music based on your mood.
-        </p>
-        <div className="flex justify-center gap-4">
-          <Link
-            to={user ? "/dashboard" : "/signup"}
-            className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
-          >
-            {user ? "Get Recommendations" : "Start for Free"}
-          </Link>
+      <div className="relative py-24 px-6 text-center shadow-2xl overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute blur-sm inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/heroSection.png')", // buraya görsel yolunu koy
+          }}
+        />
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/60" />
+
+        {/* Content */}
+        <div className="relative z-10">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-indigo-400">
+            Moodify
+          </h1>
+
+          <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+            Discover movies and tracks based on your mood.
+          </p>
+
+          <div className="flex justify-center gap-4">
+            <Link
+              to={user ? "/dashboard" : "/signup"}
+              className="bg-indigo-400 hover:bg-indigo-500 text-gray-200 font-bold py-3 px-8 rounded-full text-lg transition transform hover:scale-105 shadow-lg shadow-indigo-500/50"
+            >
+              Get Recommendations
+            </Link>
+          </div>
         </div>
       </div>
 

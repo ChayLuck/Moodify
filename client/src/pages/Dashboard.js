@@ -7,7 +7,7 @@ import TrailerModal from "../components/TrailerModal";
 
 import TrackDetailModal from "../components/TrackDetailModal";
 import PlayerBar from "../components/PlayerBar";
-import { useToast } from "../context/ToastContext";  // ✅ GLOBAL TOAST
+import { useToast } from "../context/ToastContext"; // ✅ GLOBAL TOAST
 
 const Dashboard = () => {
   const [mood, setMood] = useState("");
@@ -32,18 +32,18 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
-  const { showToast } = useToast();        // ✅ TOAST HOOK
+  const { showToast } = useToast(); // ✅ TOAST HOOK
 
   useEffect(() => {
     if (!user) navigate("/login");
   }, [user, navigate]);
 
   const MOODS = [
-    { name: "Happy", emoji: "😊", color: "bg-yellow-500 text-white" },
-    { name: "Sad", emoji: "😢", color: "bg-blue-600 text-white" },
-    { name: "Energetic", emoji: "🔥", color: "bg-red-500 text-white" },
-    { name: "Chill", emoji: "🍃", color: "bg-green-500 text-white" },
-    { name: "Romantic", emoji: "❤️", color: "bg-pink-500 text-white" },
+    { name: "Happy", color: "bg-yellow-500 text-white" },
+    { name: "Sad",color: "bg-blue-600 text-white" },
+    { name: "Energetic", color: "bg-red-500 text-white" },
+    { name: "Chill", color: "bg-green-500 text-white" },
+    { name: "Romantic", color: "bg-pink-500 text-white" },
   ];
 
   const currentUserId = user?._id || null;
@@ -57,10 +57,13 @@ const Dashboard = () => {
 
     try {
       // 1) Recommendation al
-      const res = await axios.post("http://localhost:5000/api/recommendations", {
-        userId: currentUserId,
-        mood: selectedMood,
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/recommendations",
+        {
+          userId: currentUserId,
+          mood: selectedMood,
+        }
+      );
 
       setResult(res.data);
 
@@ -199,34 +202,82 @@ const Dashboard = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
-      <div className="max-w-6xl mx-auto text-center">
-        <h1 className="text-4xl font-bold mb-4">
-          Hello, <span className="text-indigo-400">{user?.username}</span> 👋
-        </h1>
-        <p className="mb-10 text-lg">
-          How are you feeling right now?
-        </p>
+  const MOOD_IMAGES = {
+    Happy:
+      "/assets/happy.png", // Parti / Neşe
+    Sad: "/assets/sad.png", // Yağmurlu cam / Melankoli
+    Energetic:
+      "/assets/energetic.png", // Konser / Ateş / Koşu
+    Chill:
+      "/assets/chill.png", // Doğa / Kahve / Cinque Terre
+    Romantic:
+      "/assets/romantic.avif", // Gün batımı / Çift
+  };
 
-        {/* MOOD BUTTONS */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
-          {MOODS.map((m) => (
-            <button
-              key={m.name}
-              onClick={() => handleMoodSelect(m.name)}
-              className={`${m.color} px-8 py-4 rounded-2xl font-bold text-xl transition transform hover:scale-110 shadow-lg ${
-                mood === m.name
-                  ? "ring-4 ring-white scale-110"
-                  : "opacity-80 hover:opacity-100"
-              }`}
-            >
-              <span className="mr-2">{m.emoji}</span> {m.name}
-            </button>
-          ))}
+  return (
+    <div className="h-[calc(100vh-75px)] w-full overflow-hidden bg-mainBg text-mainText p-4 md:p-10 pb-32 transition-all duration-500">
+      <div className="max-w-6xl mx-auto text-center">
+        {/* HEADER */}
+        <h1 className="text-4xl font-bold mb-4">
+          Hello, <span className="text-indigo-400">{user?.username}</span>
+        </h1>
+        <p className="mb-8 text-lg">How are you feeling right now?</p>
+
+        {/* --- MOOD BUTTONS (HERO vs COMPACT MODE) --- */}
+        <div className={
+            !result 
+            /* Vitrin Modu: Görselli 3x2 Grid (Üstte 2 geniş, altta 3 kare) */
+            ? "grid grid-cols-2 md:grid-cols-6 gap-4 w-full max-w-5xl mx-auto mt-8" 
+            /* Sonuç Modu: Orijinal Flex Yapısı (Eski haline dönüyor) */
+            : "flex flex-wrap justify-center gap-4 mb-12 transition-all duration-500"
+        }>
+          {MOODS.map((m, index) => {
+             // Grid Düzeni: İlk 2 kart geniş (span-3), diğerleri kare (span-2)
+             const gridSpanClass = index < 2 ? "md:col-span-3 aspect-[2/1]" : "md:col-span-2 aspect-square";
+             
+             return (
+                <button
+                  key={m.name}
+                  onClick={() => handleMoodSelect(m.name)}
+                  className={`
+                    relative overflow-hidden rounded-2xl font-bold transition-all duration-300 transform shadow-lg group
+                    ${!result 
+                        /* Vitrin Stili (Resimli) */
+                        ? `${gridSpanClass} hover:scale-[1.02] hover:shadow-2xl text-white flex flex-col justify-end p-6 text-left` 
+                        /* Sonuç Stili (Orijinal Renkli Butonlar) */
+                        : `${m.color} px-8 py-4 text-xl hover:scale-110 opacity-80 hover:opacity-100 flex items-center` 
+                    }
+                    ${mood === m.name && result ? "ring-4 ring-white scale-110 opacity-100" : ""}
+                  `}
+                >
+                  {/* SADECE VİTRİN MODUNDA: Arka Plan Resmi ve Karartma */}
+                  {!result && (
+                      <>
+                        <div 
+                            className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
+                            style={{ backgroundImage: `url(${MOOD_IMAGES[m.name]})` }}
+                        />
+                        {/* Resmin üzerine hafif renkli filtre + karartma */}
+                        <div className={`absolute inset-0 bg-gradient-to-t ${m.color.replace('bg-', 'from-').replace('500', '900')}/90 to-transparent opacity-60 group-hover:opacity-80 transition-opacity`} />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                      </>
+                  )}
+
+                  {/* İçerik: Vitrinde altta ve büyük, Sonuçta yan yana ve küçük */}
+                  <div className="relative z-10">
+                      <span className={!result ? "text-5xl md:text-6xl mb-2 block drop-shadow-md" : "mr-2 inline"}>
+                        {m.emoji}
+                      </span> 
+                      <span className={!result ? "text-3xl md:text-4xl drop-shadow-md" : ""}>
+                        {m.name}
+                      </span>
+                  </div>
+                </button>
+            );
+          })}
         </div>
 
-        {/* LOADING */}
+        {/* LOADING STATE */}
         {loading && (
           <div className="animate-pulse text-2xl text-indigo-500 mt-10">
             Analyzing your favorites... <br />
@@ -250,7 +301,6 @@ const Dashboard = () => {
                   alt={result.track?.name}
                   className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                 />
-
                 <div className="absolute top-4 left-4 bg-black/70 px-3 py-1 rounded-full text-xs font-bold text-indigo-400">
                   Music Recommendation
                 </div>
@@ -264,8 +314,8 @@ const Dashboard = () => {
                   {result.track?.artist}
                 </p>
 
-                <div className="bg-indigo-400/20 p-3 rounded-lg text-sm  mb-6 border-l-4 border-indigo-500">
-                   {result.notes?.music}
+                <div className="bg-indigo-400/20 p-3 rounded-lg text-sm mb-6 border-l-4 border-indigo-500">
+                  {result.notes?.music}
                 </div>
 
                 <div className="mt-auto flex gap-3">
@@ -302,7 +352,6 @@ const Dashboard = () => {
                   alt={result.movie?.title}
                   className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                 />
-
                 <div className="absolute top-4 left-4 bg-black/70 px-3 py-1 rounded-full text-xs font-bold text-indigo-400">
                   Movie Recommendation
                 </div>
@@ -321,8 +370,8 @@ const Dashboard = () => {
                     : "N/A"}
                 </p>
 
-                <div className="bg-indigo-400/20 p-3 rounded-lg text-sm  mb-6 border-l-4 border-indigo-500">
-                 {result.notes?.movie}
+                <div className="bg-indigo-400/20 p-3 rounded-lg text-sm mb-6 border-l-4 border-indigo-500">
+                  {result.notes?.movie}
                 </div>
 
                 <p className="text-sm line-clamp-2 mb-4">
@@ -355,13 +404,13 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* --- MOOD MODAL --- */}
+      {/* --- EXTRA MODALS --- */}
+
+      {/* Mood Feedback Modal */}
       {showMoodModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
           <div className="bg-mainBg p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-2 ">
-              How does it feel?
-            </h3>
+            <h3 className="text-2xl font-bold mb-2 ">How does it feel?</h3>
             <p className=" mb-6 text-sm italic">
               For: "{itemToFavorite?.data?.name || itemToFavorite?.data?.title}"
             </p>

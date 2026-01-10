@@ -9,8 +9,8 @@ const FavoriteMoviesSection = ({
   if (!movies || movies.length === 0) return null;
 
   return (
-    <>
-      <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
+    <div className="px-6">
+      <h2 className="text-3xl font-bold mb-8 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
         {title}
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
@@ -52,7 +52,7 @@ const FavoriteMoviesSection = ({
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 };
 

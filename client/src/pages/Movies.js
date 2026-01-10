@@ -211,10 +211,10 @@ const Movies = () => {
   };
 
   return (
-    <div className="min-h-screen bg-mainBg  p-4 md:p-10 pb-32">
+    <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
-          🎬 <span>Discover Movies</span>
+        <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center flex items-center justify-center gap-2">
+           <span>Discover Movies</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -270,7 +270,7 @@ const Movies = () => {
         {/* RESULTS INFO & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
-            <p className="text-gray-400">
+            <p className="text-mainText">
               Found{" "}
               <span className="text-indigo-400 font-bold">{movies.length}</span>{" "}
               results for "{searchedQuery}"

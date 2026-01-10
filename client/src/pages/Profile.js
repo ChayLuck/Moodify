@@ -563,7 +563,7 @@ const Profile = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            🎵 Tracks
+             Tracks
           </button>
           <button
             onClick={() => setActiveTab("movies")}
@@ -573,7 +573,7 @@ const Profile = () => {
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            🎬 Movies
+             Movies
           </button>
         </div>
 

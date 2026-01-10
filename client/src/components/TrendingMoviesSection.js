@@ -39,7 +39,7 @@ const TrendingMoviesSection = ({
                 {/* Rating Badge */}
                 {(movie.rating || movie.voteAverage) && (
                   <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">
-                    ⭐ {Number(movie.rating || movie.voteAverage).toFixed(1)}
+                    {Number(movie.rating || movie.voteAverage).toFixed(1)}
                   </div>
                 )}
               </div>

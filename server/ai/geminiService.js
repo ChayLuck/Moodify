@@ -7,7 +7,7 @@ async function analyzeMoodFromText(text) {
   if (!text || !text.trim()) {
     return {
       type: "clarify",
-      message: "Please tell me how you feel 🙂"
+      message: "Please tell me how you feel 🙂",
     };
   }
 
@@ -23,7 +23,7 @@ async function analyzeMoodFromText(text) {
   if (wordCount === 1 && text.trim().length <= 3) {
     return {
       type: "clarify",
-      message: "Can you describe your mood a bit more? 🙂"
+      message: "Can you describe your mood a bit more? 🙂",
     };
   }
 
@@ -32,19 +32,22 @@ async function analyzeMoodFromText(text) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-Return ONLY JSON. No markdown. No explanation.
+    Return ONLY JSON. No markdown. No explanation.
 
-Valid moods: ["Happy","Sad","Energetic","Chill","Romantic"]
+    Valid moods: ["Happy","Sad","Energetic","Chill","Romantic"]
 
-User message: "${text}"
+    User message: "${text}"
 
-{"mood":"Happy","confidence":80}
+    {"mood":"Happy","confidence":80}
 `;
 
     const result = await model.generateContent(prompt);
     let raw = result.response.text().trim();
 
-    raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    raw = raw
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) raw = jsonMatch[0];
 
@@ -61,15 +64,14 @@ User message: "${text}"
     return {
       mood: finalMood,
       confidence: parsed.confidence || 70,
-      source: "ai"
+      source: "ai",
     };
-
   } catch (err) {
     console.error("❌ AI ERROR / QUOTA:", err.message);
     return {
       type: "clarify",
       message:
-        "I’m having trouble analyzing that right now 🤖 Can you describe your mood a bit more?"
+        "I’m having trouble analyzing that right now 🤖 Can you describe your mood a bit more?",
     };
   }
 }

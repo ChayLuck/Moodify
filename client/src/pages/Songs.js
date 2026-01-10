@@ -198,8 +198,8 @@ const Songs = () => {
   return (
     <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-indigo-500 mb-6 text-center flex items-center justify-center gap-2">
-          🎵 <span>Discover Songs</span>
+        <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center flex items-center justify-center gap-2">
+           <span>Discover Songs</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -254,7 +254,7 @@ const Songs = () => {
         {/* RESULT & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
-            <p className="text-gray-400 mb-2 md:mb-0">
+            <p className="text-mainText mb-2 md:mb-0">
               Found{" "}
               <span className="text-indigo-400 font-bold">{tracks.length}</span>{" "}
               results for "{searchedQuery}"

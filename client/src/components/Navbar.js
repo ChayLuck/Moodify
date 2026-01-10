@@ -34,15 +34,15 @@ const Navbar = () => {
 
   return (
     <nav
-      className=" bg-mainBg text-mainText p-4 shadow-lg border-b border-gray-200 dark:border-gray-800"
-    >
+      className=" bg-mainBg text-mainText p-4 shadow-lg border-b border-gray-200 dark:border-gray-800 ">
       <div className="container mx-auto flex justify-between items-center">
         {/* Logo */}
         <Link
           to="/"
-          className="text-2xl font-bold text-indigo-500 flex items-center gap-2"
+          className="text-2xl font-bold text-indigo-400 flex items-center gap-2"
         >
-          Moodify 🎵🎬
+          {/* <img src="mainlogo.png" alt="Moodify Logo" style={{ width: '40px', height: 'auto' }} />  */}
+          Moodify 
         </Link>
 
         {/* Right side */}
