@@ -4,6 +4,11 @@ import { useNavigate } from "react-router-dom";
 import ProfileIconPicker from "../components/ProfileIconPicker";
 import { useToast } from "../context/ToastContext";
 
+import MovieDetailModal from "../components/MovieDetailModal";
+import TrackDetailModal from "../components/TrackDetailModal";
+import TrailerModal from "../components/TrailerModal";
+import PlayerBar from "../components/PlayerBar";
+
 const MOODS = [
   { name: "Happy", emoji: "😊", color: "bg-yellow-500 text-black" },
   { name: "Sad", emoji: "😢", color: "bg-blue-600 text-white" },
@@ -12,9 +17,31 @@ const MOODS = [
   { name: "Romantic", emoji: "❤️", color: "bg-pink-500 text-white" },
 ];
 
+const getMoodEmoji = (moodName) => {
+  switch (moodName) {
+    case "Happy":
+      return "😊";
+    case "Sad":
+      return "😢";
+    case "Energetic":
+      return "🔥";
+    case "Chill":
+      return "🍃";
+    case "Romantic":
+      return "❤️";
+    default:
+      return "🌙";
+  }
+};
+
 const Profile = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // --- MOOD HISTORY STATE ---
+  const [moodHistory, setMoodHistory] = useState([]);
+  const [moodStats, setMoodStats] = useState(null);
+  const [moodLoading, setMoodLoading] = useState(true);
 
   // --- UI STATES ---
   const [activeTab, setActiveTab] = useState("tracks"); // 'tracks' veya 'movies'
@@ -28,6 +55,13 @@ const Profile = () => {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showIconModal, setShowIconModal] = useState(false);
+
+  const [selectedMoodEntry, setSelectedMoodEntry] = useState(null);
+
+  // --- TRAILER STATES (PROFILE) ---
+  const [trailerUrl, setTrailerUrl] = useState(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // --- REMOVE CONFIRM MODAL ---
   const [removeConfirm, setRemoveConfirm] = useState({
@@ -69,6 +103,29 @@ const Profile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, currentUserId]);
 
+  // --- MOOD HISTORY FETCH ---
+  useEffect(() => {
+    const fetchMoodHistory = async () => {
+      if (!currentUserId) return;
+
+      try {
+        // days=0 → TÜM geçmiş (filtre yok)
+        const res = await axios.get(
+          `http://localhost:5000/api/mood/history/${currentUserId}?days=0`
+        );
+
+        setMoodHistory(res.data.entries || []);
+        setMoodStats(res.data.stats || null);
+      } catch (error) {
+        console.error("Mood history fetch error:", error);
+      } finally {
+        setMoodLoading(false);
+      }
+    };
+
+    fetchMoodHistory();
+  }, [currentUserId]);
+
   // --- ACTIVE TAB DEĞİŞTİĞİNDE SORT TYPE'I GÜNCELLE ---
   useEffect(() => {
     if (activeTab === "tracks") {
@@ -90,25 +147,21 @@ const Profile = () => {
     setSelectedItem(item);
     document.body.style.overflow = "hidden";
 
-    // Eğer film seçildiyse, backend'den tam detayları çek
-    // Backend'den gelen film verisinde _id TMDb ID'sidir
     if (activeTab === "movies" && item._id) {
       try {
         const res = await axios.get(
           `http://localhost:5000/api/movies/details/${item._id}`
         );
-        // Backend'den gelen detayları orijinal item ile birleştir (userMood ve _id'yi koru)
         const detailedMovie = {
           ...res.data,
           userMood: item.userMood,
-          _id: item._id, // Orijinal item'dan _id'yi koru (mood güncelleme ve silme için gerekli)
-          id: res.data.id || item._id, // Backend'den gelen id'yi de ekle
+          _id: item._id,
+          id: res.data.id || item._id,
         };
         setSelectedItem(detailedMovie);
       } catch (error) {
         console.error("Movie details error:", error);
         showToast("error", "Movie details could not be loaded.");
-        // Hata durumunda en azından orijinal item'ı göster
         setSelectedItem(item);
       }
     }
@@ -121,6 +174,29 @@ const Profile = () => {
     document.body.style.overflow = "auto";
   };
 
+  // --- TRAILER FETCH (PROFILE) ---
+  const fetchTrailer = async (movieId) => {
+    setTrailerLoading(true);
+    setTrailerUrl(null);
+
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/movies/trailer/${movieId}`
+      );
+
+      if (!res.data.trailer) {
+        showToast("info", "Trailer not found 🎬❌");
+      } else {
+        setTrailerUrl(res.data.trailer);
+      }
+    } catch (error) {
+      console.error("Trailer Fetch Error:", error);
+      showToast("error", "Trailer yüklenirken hata oluştu.");
+    } finally {
+      setTrailerLoading(false);
+    }
+  };
+
   // --- SİLME FONKSİYONU (GÜNCELLENDİ) ---
   const handleRemoveFavorite = (itemId, itemName) => {
     setRemoveConfirm({
@@ -129,7 +205,6 @@ const Profile = () => {
       itemName,
       onConfirm: async () => {
         try {
-          // 👇 BURASI KRİTİK: Hangi sekmedeysek ona uygun endpoint'e git
           const endpoint =
             activeTab === "tracks"
               ? "http://localhost:5000/api/users/favorites/remove"
@@ -142,7 +217,6 @@ const Profile = () => {
 
           await axios.post(endpoint, payload);
 
-          // State'den de silelim ki sayfa yenilenmeden kaybolsun
           setUserProfile((prev) => {
             if (activeTab === "tracks") {
               return {
@@ -162,8 +236,7 @@ const Profile = () => {
           });
 
           setSelectedItem(null);
-          showToast("success",`${itemName} removed from favorites.`
-          );
+          showToast("success", `${itemName} removed from favorites.`);
           setRemoveConfirm({ open: false });
         } catch (error) {
           console.error(error);
@@ -213,6 +286,22 @@ const Profile = () => {
     return found ? found.color : "bg-gray-600 text-white";
   };
 
+  // --- MOST FREQUENT MOOD HELPER ---
+  const getMostFrequentMood = (moodCounts) => {
+    if (!moodCounts || Object.keys(moodCounts).length === 0) return "-";
+    let maxMood = "";
+    let maxCount = 0;
+
+    Object.entries(moodCounts).forEach(([mood, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        maxMood = mood;
+      }
+    });
+
+    return maxMood;
+  };
+
   // --- IKON GÜNCELLEME ---
   const updateProfileIcon = async (icon) => {
     try {
@@ -244,7 +333,6 @@ const Profile = () => {
 
     let sorted = [...list];
 
-    // Tracks için sıralama (Songs.js ile aynı)
     if (activeTab === "tracks") {
       switch (sortType) {
         case "popularity_desc":
@@ -266,13 +354,37 @@ const Profile = () => {
           break;
         case "relevance":
         default:
-          // Varsayılan sıralama (eklenme sırasına göre)
+          // eklenme sırası
           break;
       }
     } else {
-      // Movies için sıralama (varsayılan)
-      if (sortType === "date_added_newest") {
-        // Sorting ID (MongoID) genelde zamana göredir
+      // 🎬 MOVIES İÇİN AYNI MANTIK
+      switch (sortType) {
+        case "popularity_desc":
+          sorted.sort((a, b) => {
+            const popA = a.popularity ?? a.rating ?? a.voteAverage ?? 0;
+            const popB = b.popularity ?? b.rating ?? b.voteAverage ?? 0;
+            return popB - popA;
+          });
+          break;
+        case "date_newest":
+          sorted.sort((a, b) => {
+            const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+            const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+            return dateB - dateA;
+          });
+          break;
+        case "date_oldest":
+          sorted.sort((a, b) => {
+            const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+            const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+            return dateA - dateB;
+          });
+          break;
+        case "relevance":
+        default:
+          // eklenme sırası (Mongo’dan geldiği gibi)
+          break;
       }
     }
 
@@ -316,6 +428,130 @@ const Profile = () => {
             </button>
           </div>
         </div>
+
+        {/* --- MOOD HISTORY SECTION (TABS'İN HEMEN ÜSTÜ) --- */}
+        <section className="bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 rounded-2xl border border-indigo-900/40 p-6 mb-8 shadow-[0_0_40px_rgba(79,70,229,0.25)]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                Mood History
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Your last 7 days of mood-based activity.
+              </p>
+            </div>
+            <span className="text-xs md:text-sm text-gray-400 bg-gray-900/60 px-3 py-1 rounded-full border border-gray-700/70">
+              Last 7 days
+            </span>
+          </div>
+
+          {moodLoading ? (
+            <p className="text-gray-400 text-sm">Loading mood data...</p>
+          ) : moodHistory.length === 0 ? (
+            <p className="text-gray-400 text-sm">
+              No mood data yet. Get your first mood-based recommendation from
+              the dashboard to see your mood history here.
+            </p>
+          ) : (
+            <>
+              {/* üstte istatistik kartları */}
+              {moodStats && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {/* total */}
+                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80 flex flex-col justify-between">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                      Total Mood Entries
+                    </p>
+                    <p className="text-3xl font-bold text-white mt-2">
+                      {moodStats.total}
+                    </p>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Every selection from your dashboard is tracked here.
+                    </p>
+                  </div>
+
+                  {/* last mood */}
+                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                      Last Mood
+                    </p>
+                    {moodStats.lastMood ? (
+                      <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-400/10 border border-indigo-400/40">
+                        <span className="text-lg">
+                          {getMoodEmoji(moodStats.lastMood)}
+                        </span>
+                        <span
+                          className={`text-xs font-semibold ${getMoodColor(
+                            moodStats.lastMood
+                          )} px-2 py-0.5 rounded-full`}
+                        >
+                          {moodStats.lastMood}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-2">-</p>
+                    )}
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      Your most recent mood selection.
+                    </p>
+                  </div>
+
+                  {/* most frequent */}
+                  <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-700/80">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">
+                      Most Frequent Mood
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-lg">
+                        {getMoodEmoji(
+                          getMostFrequentMood(moodStats.moodCounts)
+                        )}
+                      </span>
+                      <p className="text-lg font-semibold text-white capitalize">
+                        {getMostFrequentMood(moodStats.moodCounts)}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      The mood you choose the most.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* timeline tarzı history listesi */}
+              <div className="relative max-h-64 overflow-y-auto pr-1 custom-scrollbar mt-2">
+                {/* sol çizgi */}
+                <div className="absolute left-3 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500/60 via-indigo-500/20 to-transparent pointer-events-none" />
+
+                <div className="space-y-2">
+                  {moodHistory.map((entry) => (
+                    <div
+                      key={entry._id}
+                      onClick={() => setSelectedMoodEntry(entry)}
+                      className="cursor-pointer relative pl-8 pr-3 py-2 rounded-lg hover:bg-gray-900/80 transition border border-transparent hover:border-gray-700/70"
+                    >
+                      {/* nokta */}
+                      <span className="absolute left-1.5 top-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.9)]" />
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">
+                            {getMoodEmoji(entry.mood)}
+                          </span>
+                          <span className="text-sm text-white capitalize font-medium">
+                            {entry.mood}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                          {new Date(entry.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
 
         {/* TABS */}
         <div className="flex gap-6 mb-6 border-b border-gray-700">
@@ -368,8 +604,12 @@ const Profile = () => {
                 </>
               ) : (
                 <>
-                  <option value="date_added_newest">Date Added (Newest)</option>
-                  <option value="date_added_oldest">Date Added (Oldest)</option>
+                  <option value="relevance">Recommended</option>
+                  <option value="popularity_desc">
+                    Popularity (High to Low)
+                  </option>
+                  <option value="date_newest">Release Date (Newest)</option>
+                  <option value="date_oldest">Release Date (Oldest)</option>
                 </>
               )}
             </select>
@@ -386,7 +626,6 @@ const Profile = () => {
                 className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-600/20 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700 relative"
               >
                 <div className="relative aspect-square">
-                  {/* Resim Kaynağı Dinamik */}
                   <img
                     src={
                       activeTab === "tracks" ? item.albumCover : item.posterPath
@@ -422,209 +661,60 @@ const Profile = () => {
         )}
       </div>
 
-      {/* DETAIL MODAL */}
-      {selectedItem && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-          onClick={closeModal}
-        >
-          <div
-            className={`bg-gray-900 rounded-2xl ${
-              activeTab === "tracks" ? "max-w-4xl" : "max-w-5xl"
-            } w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center"
-            >
-              ×
-            </button>
-            {modalLoading ? (
-              <div className="p-20 w-full text-center text-xl">Loading...</div>
-            ) : (
-              <>
-                <div
-                  className={`w-full ${
-                    activeTab === "movies" ? "md:w-1/3" : "md:w-1/2"
-                  } ${
-                    activeTab === "tracks" ? "h-80" : "h-96"
-                  } md:h-auto relative`}
-                >
-                  <img
-                    src={
-                      activeTab === "tracks"
-                        ? selectedItem.albumCover
-                        : selectedItem.poster || selectedItem.posterPath
-                    }
-                    alt={selectedItem.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div
-                  className={`w-full ${
-                    activeTab === "movies" ? "md:w-2/3" : "md:w-1/2"
-                  } p-8 flex flex-col ${
-                    activeTab === "tracks" ? "justify-center" : ""
-                  }`}
-                >
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {selectedItem.title}
-                  </h2>
+      {/* MOVIE DETAIL MODAL (PROFILE) */}
+      <MovieDetailModal
+        movie={activeTab === "movies" ? selectedItem : null}
+        loading={modalLoading}
+        onClose={closeModal}
+        onWatchTrailer={
+          activeTab === "movies" && selectedItem
+            ? async () => {
+                console.log("Watch Trailer clicked in PROFILE"); // Debug için
 
-                  {activeTab === "tracks" ? (
-                    <>
-                      <p className="text-xl text-indigo-400 mb-6">
-                        {selectedItem.artist}
-                      </p>
-                      <div className="space-y-3 text-gray-300 text-sm mb-8">
-                        <div className="flex justify-between border-b border-gray-800 pb-2">
-                          <span>Album</span>
-                          <span className="text-white">
-                            {selectedItem.album}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-2">
-                          <span>Release Date</span>
-                          <span className="text-white">
-                            {selectedItem.releaseDate}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Popularity</span>
-                          <div className="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-500"
-                              style={{
-                                width: `${selectedItem.popularity || 0}%`,
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap gap-3 mb-4">
-                        {selectedItem.genres?.map((g) => (
-                          <span
-                            key={g}
-                            className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300"
-                          >
-                            {g}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-gray-300 leading-relaxed mb-6">
-                        {selectedItem.overview}
-                      </p>
+                const id = selectedItem.id || selectedItem._id;
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                          <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                            Director
-                          </h4>
-                          <p className="text-gray-300">
-                            {selectedItem.director}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                            Cast
-                          </h4>
-                          <div className="flex flex-col gap-2">
-                            {selectedItem.cast?.map((actor) => (
-                              <div
-                                key={actor.name}
-                                className="flex items-center gap-3"
-                              >
-                                <img
-                                  src={
-                                    actor.photo ||
-                                    "https://via.placeholder.com/50"
-                                  }
-                                  alt={actor.name}
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                                <div>
-                                  <p className="text-sm text-white">
-                                    {actor.name}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                // 1) Trailer'ı çek
+                await fetchTrailer(id);
 
-                  {(activeTab === "movies" || activeTab === "tracks") && (
-                    <div className="flex justify-between pt-4 items-center mb-6">
-                      <span className="text-gray-300">Mood</span>
-                      <button
-                        onClick={() => {
-                          setItemToEdit(selectedItem);
-                          setShowMoodModal(true);
-                        }}
-                        className={`px-3 py-1 rounded-full text-xs font-bold hover:scale-105 transition ${getMoodColor(
-                          selectedItem.userMood
-                        )}`}
-                      >
-                        {selectedItem.userMood}
-                      </button>
-                    </div>
-                  )}
+                // 2) Trailer modalını aç
+                setShowTrailerModal(true);
+              }
+            : undefined
+        }
+        onRemove={
+          selectedItem
+            ? () => handleRemoveFavorite(selectedItem._id, selectedItem.title)
+            : undefined
+        }
+        moodLabel={selectedItem?.userMood}
+        moodColorClass={getMoodColor(selectedItem?.userMood)}
+        onChangeMood={() => {
+          setItemToEdit(selectedItem);
+          setShowMoodModal(true);
+        }}
+      />
 
-                  <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
-                    {activeTab === "tracks" ? (
-                      <>
-                        <button
-                          onClick={() => setPlayingTrack(selectedItem._id)}
-                          className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg"
-                        >
-                          Play Now
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleRemoveFavorite(
-                              selectedItem._id,
-                              selectedItem.title
-                            )
-                          }
-                          className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
-                        >
-                          Remove
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={closeModal}
-                          className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold"
-                        >
-                          Close
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleRemoveFavorite(
-                              selectedItem._id,
-                              selectedItem.title
-                            )
-                          }
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-lg"
-                        >
-                          Remove
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* TRACK DETAIL MODAL (PROFILE) */}
+      <TrackDetailModal
+        open={activeTab === "tracks" && !!selectedItem}
+        track={selectedItem}
+        loading={modalLoading}
+        onClose={closeModal}
+        onPlay={
+          selectedItem ? () => setPlayingTrack(selectedItem._id) : undefined
+        }
+        onRemove={
+          selectedItem
+            ? () => handleRemoveFavorite(selectedItem._id, selectedItem.title)
+            : undefined
+        }
+        moodLabel={selectedItem?.userMood}
+        moodColorClass={getMoodColor(selectedItem?.userMood)}
+        onChangeMood={() => {
+          setItemToEdit(selectedItem);
+          setShowMoodModal(true);
+        }}
+      />
 
       {/* CONFIRM REMOVE MODAL */}
       {removeConfirm.open && (
@@ -699,31 +789,97 @@ const Profile = () => {
         </div>
       )}
 
-      {/* PLAYER */}
-      {playingTrack && (
-        <div className="fixed bottom-0 left-0 w-full bg-black/90 border-t border-indigo-400 p-4 backdrop-blur-lg z-[70]">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <iframe
-                src={`https://open.spotify.com/embed/track/${playingTrack}?utm_source=generator&theme=0&autoplay=1`}
-                width="100%"
-                height="80"
-                frameBorder="0"
-                allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
-                className="rounded-lg shadow-lg bg-black"
-                title="Spotify Player"
-              ></iframe>
+      {selectedMoodEntry && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+          onClick={() => setSelectedMoodEntry(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gray-900 rounded-2xl w-full max-w-2xl p-6 border border-gray-700 shadow-2xl animate-fade-in"
+          >
+            {/* Title */}
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+              {getMoodEmoji(selectedMoodEntry.mood)}
+              Mood: {selectedMoodEntry.mood}
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* TRACK CARD */}
+              {selectedMoodEntry.recommendedTrack && (
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 hover:border-indigo-500 transition">
+                  <h3 className="text-indigo-400 font-semibold mb-3">
+                    🎵 Recommended Track
+                  </h3>
+
+                  <div className="relative h-40 mb-3 rounded-lg overflow-hidden">
+                    <img
+                      src={selectedMoodEntry.recommendedTrack.image}
+                      alt={selectedMoodEntry.recommendedTrack.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <p className="text-white font-medium truncate">
+                    {selectedMoodEntry.recommendedTrack.name}
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {selectedMoodEntry.recommendedTrack.artist}
+                  </p>
+                </div>
+              )}
+
+              {/* MOVIE CARD */}
+              {selectedMoodEntry.recommendedMovie && (
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 hover:border-indigo-500 transition">
+                  <h3 className="text-indigo-400 font-semibold mb-3">
+                    🎬 Recommended Movie
+                  </h3>
+
+                  <div className="relative h-40 mb-3 rounded-lg overflow-hidden">
+                    <img
+                      src={selectedMoodEntry.recommendedMovie.poster}
+                      alt={selectedMoodEntry.recommendedMovie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <p className="text-white font-medium truncate">
+                    {selectedMoodEntry.recommendedMovie.title}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Close Button */}
             <button
-              onClick={() => setPlayingTrack(null)}
-              className="text-gray-400 hover:text-red-500 transition text-3xl px-4"
+              onClick={() => setSelectedMoodEntry(null)}
+              className="mt-6 w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold shadow"
             >
-              ×
+              Close
             </button>
           </div>
         </div>
       )}
+
+      {/* TRAILER MODAL (PROFILE) */}
+      <TrailerModal
+        isOpen={showTrailerModal}
+        trailerUrl={trailerUrl}
+        loading={trailerLoading}
+        onClose={() => {
+          setShowTrailerModal(false);
+          setTrailerUrl(null);
+        }}
+      />
+
+      {/* PLAYER */}
+      <PlayerBar
+        trackId={playingTrack}
+        onClose={() => setPlayingTrack(null)}
+        borderColorClass="border-indigo-400"
+      />
+
     </div>
   );
 };
