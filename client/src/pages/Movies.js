@@ -3,6 +3,13 @@ import axios from "axios";
 import { useToast } from "../context/ToastContext";
 import { useNavigate } from "react-router-dom";
 
+import MovieDetailModal from "../components/MovieDetailModal";
+import TrailerModal from "../components/TrailerModal";
+
+import TrendingMoviesSection from "../components/TrendingMoviesSection";
+
+import FavoriteMoviesSection from "../components/FavoriteMoviesSection";
+
 const Movies = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -51,7 +58,9 @@ const Movies = () => {
   useEffect(() => {
     const fetchTrendingMovies = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/content/trending-movies");
+        const res = await axios.get(
+          "http://localhost:5000/api/content/trending-movies"
+        );
         setTrendingMovies(res.data);
         setInitialLoading(false);
       } catch (error) {
@@ -90,7 +99,9 @@ const Movies = () => {
     setSortType("relevance");
     setSearchedQuery(query);
     try {
-      const res = await axios.get(`http://localhost:5000/api/movies/search?q=${query}`);
+      const res = await axios.get(
+        `http://localhost:5000/api/movies/search?q=${query}`
+      );
       setMovies(res.data);
     } catch (error) {
       console.error("Search error:", error);
@@ -106,8 +117,10 @@ const Movies = () => {
     setSortType(type);
     let sortedMovies = [...movies];
 
-    if (type === "rating_desc") sortedMovies.sort((a, b) => b.rating - a.rating);
-    else if (type === "rating_asc") sortedMovies.sort((a, b) => a.rating - b.rating);
+    if (type === "rating_desc")
+      sortedMovies.sort((a, b) => b.rating - a.rating);
+    else if (type === "rating_asc")
+      sortedMovies.sort((a, b) => a.rating - b.rating);
     else if (type === "year_desc")
       sortedMovies.sort(
         (a, b) => parseInt(b.releaseDate) - parseInt(a.releaseDate)
@@ -125,7 +138,9 @@ const Movies = () => {
     setSelectedMovie({ id: movieId });
     document.body.style.overflow = "hidden";
     try {
-      const res = await axios.get(`http://localhost:5000/api/movies/details/${movieId}`);
+      const res = await axios.get(
+        `http://localhost:5000/api/movies/details/${movieId}`
+      );
       setSelectedMovie(res.data);
     } catch (error) {
       console.error("Detail error:", error);
@@ -196,10 +211,10 @@ const Movies = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-10 pb-32">
+    <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center flex items-center justify-center gap-2">
-          🎬 <span className="text-white">Discover Movies</span>
+           <span>Discover Movies</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -210,7 +225,7 @@ const Movies = () => {
           <input
             type="text"
             placeholder="Search for a movie..."
-            className="w-full p-4 rounded-full bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
+            className="w-full p-4 rounded-full bg-indigo-400/20 text-mainText border border-gray-700 focus:outline-none focus:border-indigo-400 text-lg"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -235,114 +250,37 @@ const Movies = () => {
           <>
             {/* FAVORITE MOVIES SECTION */}
             {user && favoriteMovies.length > 0 && (
-              <>
-                <h2 className="text-3xl font-bold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center gap-2 text-indigo-400">
-                  Your Favorite Movies
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
-                  {favoriteMovies.map((fav) => (
-                    <div
-                      key={fav._id}
-                      onClick={() => fetchDetailsAndOpen(fav._id)} // _id = TMDb movie id
-                      className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group relative cursor-pointer border border-gray-700"
-                    >
-                      <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
-                        {fav.posterPath || fav.poster ? (
-                          <img
-                            src={fav.posterPath || fav.poster}
-                            alt={fav.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-5xl text-gray-500">🎞️</span>
-                        )}
-
-                        {fav.userMood && (
-                          <span
-                            className={`absolute top-2 right-2 px-2 py-1 rounded-md text-xs font-bold shadow-md ${getMoodColor(
-                              fav.userMood
-                            )}`}
-                          >
-                            {fav.userMood}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold truncate text-lg text-white group-hover:text-indigo-400 transition">
-                          {fav.title}
-                        </h3>
-                        <p className="text-gray-400 text-sm truncate">
-                          {fav.releaseDate
-                            ? fav.releaseDate.substring(0, 4)
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <FavoriteMoviesSection
+                movies={favoriteMovies}
+                getMoodColor={getMoodColor}
+                onMovieClick={(fav) => fetchDetailsAndOpen(fav._id)}
+              />
             )}
 
             {/* TRENDING MOVIES */}
-            {initialLoading ? (
-              <p className="text-center text-gray-500 py-20">
-                Loading trending movies...
-              </p>
-            ) : (
-              <>
-                <h2 className="text-3xl font-bold mb-8 border-l-4 border-yellow-500 pl-4 flex items-center gap-2 text-yellow-500">
-                  Trending Movies
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
-                  {trendingMovies.map((movie) => (
-                    <div
-                      key={movie.id}
-                      onClick={() => fetchDetailsAndOpen(movie.id)}
-                      className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-yellow-500/30 hover:shadow-2xl transition duration-300 transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
-                    >
-                      <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
-                        {movie.poster ? (
-                          <img
-                            src={movie.poster}
-                            alt={movie.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-5xl text-gray-500">🎞️</span>
-                        )}
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow">
-                          ⭐ {movie.rating.toFixed(1)}
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold truncate text-lg text-white group-hover:text-yellow-400 transition">
-                          {movie.title}
-                        </h3>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            <TrendingMoviesSection
+              movies={trendingMovies}
+              loading={initialLoading}
+              loadingText="Loading trending movies..."
+              onMovieClick={(movie) => fetchDetailsAndOpen(movie.id)}
+            />
           </>
         )}
 
         {/* RESULTS INFO & SORT */}
         {searched && (
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 px-2">
-            <p className="text-gray-400">
+            <p className="text-mainText">
               Found{" "}
-              <span className="text-indigo-400 font-bold">
-                {movies.length}
-              </span>{" "}
+              <span className="text-indigo-400 font-bold">{movies.length}</span>{" "}
               results for "{searchedQuery}"
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Sort By:</span>
+              <span className="text-sm text-mainText">Sort By:</span>
               <select
                 value={sortType}
                 onChange={handleSortChange}
-                className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer"
+                className="bg-mainBg text-mainText border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer"
               >
                 <option value="relevance">Recommended</option>
                 <option value="rating_desc">Rating (High to Low)</option>
@@ -361,9 +299,9 @@ const Movies = () => {
               <div
                 key={movie.id}
                 onClick={() => fetchDetailsAndOpen(movie.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
+                className="bg-cardBg rounded-xl overflow-hidden hover:shadow-indigo-400/20 hover:shadow-2xl transition transform hover:-translate-y-2 group cursor-pointer border border-gray-700"
               >
-                <div className="relative aspect-square bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-square text bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
                   {movie.poster ? (
                     <img
                       src={movie.poster}
@@ -378,7 +316,7 @@ const Movies = () => {
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="font-bold text-white truncate text-sm group-hover:text-indigo-400">
+                  <h3 className="font-bold text-mainText truncate text-sm group-hover:text-indigo-400">
                     {movie.title}
                   </h3>
                 </div>
@@ -397,142 +335,25 @@ const Movies = () => {
       </div>
 
       {/* --- DETAIL MODAL --- */}
-      {selectedMovie && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl relative flex flex-col md:flex-row"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl z-10 bg-black/50 w-10 h-10 rounded-full flex items-center justify-center"
-            >
-              ×
-            </button>
-            {modalLoading ? (
-              <div className="p-20 w-full text-center text-xl">Loading...</div>
-            ) : (
-              <>
-                <div className="w-full md:w-1/3 h-96 md:h-auto relative">
-                  <img
-                    src={selectedMovie.poster}
-                    alt={selectedMovie.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="w-full md:w-2/3 p-8 flex flex-col">
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {selectedMovie.title}
-                  </h2>
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    {selectedMovie.genres?.map((g) => (
-                      <span
-                        key={g}
-                        className="px-3 py-1 bg-gray-800 border border-gray-600 rounded-full text-xs text-gray-300"
-                      >
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-gray-300 leading-relaxed mb-6">
-                    {selectedMovie.overview}
-                  </p>
-
-                  {/* Cast & Director bölümleri */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                        Director
-                      </h4>
-                      <p className="text-gray-300">{selectedMovie.director}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">
-                        Cast
-                      </h4>
-                      <div className="flex flex-col gap-2">
-                        {selectedMovie.cast?.map((actor) => (
-                          <div
-                            key={actor.name}
-                            className="flex items-center gap-3"
-                          >
-                            <img
-                              src={
-                                actor.photo || "https://via.placeholder.com/50"
-                              }
-                              alt={actor.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <div>
-                              <p className="text-sm text-white">
-                                {actor.name}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-4 border-t border-gray-700 flex gap-4">
-                    <button
-                      className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-lg font-bold transition shadow-lg flex items-center justify-center"
-                      onClick={() => {
-                        fetchTrailer(selectedMovie.id);
-                        setShowTrailerModal(true);
-                      }}
-                    >
-                      Watch Trailer
-                    </button>
-                    <button
-                      onClick={() => initiateFavorite(selectedMovie)}
-                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold shadow-lg"
-                    >
-                      ❤️ Favorite
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <MovieDetailModal
+        movie={selectedMovie}
+        loading={modalLoading}
+        onClose={closeModal}
+        onFavorite={() => initiateFavorite(selectedMovie)}
+        onWatchTrailer={() => {
+          fetchTrailer(selectedMovie.id);
+          setShowTrailerModal(true);
+        }}
+      />
 
       {/* --- TRAILER MODAL --- */}
-      {showTrailerModal && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowTrailerModal(false)}
-        >
-          <div
-            className="bg-gray-900 rounded-xl w-full max-w-4xl p-4 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowTrailerModal(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-white text-3xl"
-            >
-              &times;
-            </button>
-
-            {!trailerUrl ? (
-              <p className="text-center text-gray-400 py-10 text-xl">
-                Trailer loading 🎬
-              </p>
-            ) : (
-              <iframe
-                src={trailerUrl}
-                title="Trailer"
-                className="w-full h-[400px] rounded-lg border border-gray-700"
-                allow="autoplay; fullscreen"
-              ></iframe>
-            )}
-          </div>
-        </div>
-      )}
+      <TrailerModal
+        isOpen={showTrailerModal}
+        trailerUrl={trailerUrl}
+        loading={trailerLoading}
+        onClose={() => setShowTrailerModal(false)}
+        loadingText="Trailer loading 🎬"
+      />
 
       {/* --- MOOD MODAL --- */}
       {showMoodModal && (
