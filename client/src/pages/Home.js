@@ -44,11 +44,11 @@ const Home = () => {
   const user = JSON.parse(localStorage.getItem("user"));
 
   const MOODS = [
-    { name: "Happy", emoji: "😊", color: "bg-yellow-500" },
-    { name: "Sad", emoji: "😢", color: "bg-blue-600" },
-    { name: "Energetic", emoji: "🔥", color: "bg-red-500" },
-    { name: "Chill", emoji: "🍃", color: "bg-green-500" },
-    { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
+    { name: "Happy",color: "bg-yellow-500" },
+    { name: "Sad", color: "bg-blue-600" },
+    { name: "Energetic",color: "bg-red-500" },
+    { name: "Chill", color: "bg-green-500" },
+    { name: "Romantic",color: "bg-pink-500" },
   ];
 
   // ⭐ TRACK DETAILS CACHE
@@ -349,19 +349,27 @@ const Home = () => {
 
       {/* --- MOOD SELECTION MODAL --- */}
       {showMoodModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
-          <div className="bg-cardBg text-mainText p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-2 ">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-mainBg p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-2 text-mainText">
               How does this make you feel?
             </h3>
+            <p className="text-gray-500 mb-6 text-sm italic">
+              "{movieToFavorite?.title || trackToFavorite?.name}"
+            </p>
+
             <div className="grid grid-cols-2 gap-3 mt-4">
-              {MOODS.map((m) => (
+              {MOODS.map((m, index) => (
                 <button
                   key={m.name}
                   onClick={() => saveFavoriteWithMood(m.name)}
-                  className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}
+                  className={`
+                    ${m.color} 
+                    hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg
+                    ${index === 4 ? "col-span-2 w-1/2 mx-auto" : ""} 
+                  `}
                 >
-                  <span className="text-xl">{m.emoji}</span> {m.name}
+                  {m.name}
                 </button>
               ))}
             </div>

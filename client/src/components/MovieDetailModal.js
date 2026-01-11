@@ -128,7 +128,7 @@ const MovieDetailModal = ({
                     onClick={onFavorite}
                     className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold border border-gray-600"
                   >
-                    ❤️ Favorite
+                    Add to Favorites
                   </button>
                 )}
 

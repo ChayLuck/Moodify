@@ -337,7 +337,7 @@ const Dashboard = () => {
                     }}
                     className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold border border-gray-600 transition flex items-center justify-center gap-2"
                   >
-                    ❤️ Favorite
+                    Add to Favorites
                   </button>
                 </div>
               </div>
@@ -394,7 +394,7 @@ const Dashboard = () => {
                     }}
                     className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold border border-gray-600 transition flex items-center justify-center gap-2"
                   >
-                    ❤️ Favorite
+                    Add to Favorites
                   </button>
                 </div>
               </div>

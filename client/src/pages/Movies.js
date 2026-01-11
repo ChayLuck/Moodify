@@ -38,11 +38,11 @@ const Movies = () => {
   const userId = user ? user._id : null;
 
   const MOODS = [
-    { name: "Happy", emoji: "😊", color: "bg-yellow-500" },
-    { name: "Sad", emoji: "😢", color: "bg-blue-600" },
-    { name: "Energetic", emoji: "🔥", color: "bg-red-500" },
-    { name: "Chill", emoji: "🍃", color: "bg-green-500" },
-    { name: "Romantic", emoji: "❤️", color: "bg-pink-500" },
+    { name: "Happy", color: "bg-yellow-500" },
+    { name: "Sad", color: "bg-blue-600" },
+    { name: "Energetic", color: "bg-red-500" },
+    { name: "Chill", color: "bg-green-500" },
+    { name: "Romantic", color: "bg-pink-500" },
   ];
 
   // ⭐ FAVORITE MOVIES STATE
@@ -214,7 +214,7 @@ const Movies = () => {
     <div className="min-h-screen bg-mainBg text-mainText p-4 md:p-10 pb-32">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-indigo-400 mb-6 text-center flex items-center justify-center gap-2">
-           <span>Discover Movies</span>
+          <span>Discover Movies</span>
         </h1>
 
         {/* SEARCH BAR */}
@@ -358,22 +358,32 @@ const Movies = () => {
       {/* --- MOOD MODAL --- */}
       {showMoodModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
-          <div className="bg-gray-800 p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
-            <h3 className="text-2xl font-bold mb-2 text-white">Select Mood</h3>
+          <div className="bg-mainBg p-8 rounded-2xl max-w-md w-full border border-gray-500 shadow-2xl text-center">
+            <h3 className="text-2xl font-bold mb-2 text-mainText">
+              How does this make you feel?
+            </h3>
+            <p className="text-gray-500 mb-6 text-sm italic">
+              "{movieToFavorite?.title}"
+            </p>
+            
             <div className="grid grid-cols-2 gap-3 mt-4">
-              {MOODS.map((m) => (
+              {MOODS.map((m, index) => (
                 <button
                   key={m.name}
                   onClick={() => saveFavoriteWithMood(m.name)}
-                  className={`${m.color} hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg`}
+                  className={`
+                    ${m.color} 
+                    hover:opacity-80 text-white font-bold py-3 rounded-xl transition transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg
+                    ${index === 4 ? "col-span-2 w-1/2 mx-auto" : ""} 
+                  `}
                 >
-                  <span className="text-xl">{m.emoji}</span> {m.name}
+                  {m.name}
                 </button>
               ))}
             </div>
             <button
               onClick={() => setShowMoodModal(false)}
-              className="mt-6 text-gray-400 hover:text-white underline text-sm"
+              className="mt-6 underline text-sm"
             >
               Cancel
             </button>
