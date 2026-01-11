@@ -2,25 +2,39 @@ const axios = require('axios');
 const User = require('../models/User');
 const Track = require('../models/Track');
 const History = require('../models/History');
-const qs = require('qs'); 
+const qs = require('qs');
 
 const MOOD_CONFIG = {
-    'Happy': { keyword: 'happy hits', genreId: 35 },
-    'Sad': { keyword: 'sad songs', genreId: 18 },
-    'Energetic': { keyword: 'workout motivation', genreId: 28 },
-    'Chill': { keyword: 'chill relax', genreId: 878 },
-    'Romantic': { keyword: 'love songs', genreId: 10749 }
+    Happy: { keyword: 'happy hits', genreId: 35 },
+    Sad: { keyword: 'sad songs', genreId: 18 },
+    Energetic: { keyword: 'workout motivation', genreId: 28 },
+    Chill: { keyword: 'chill relax', genreId: 878 },
+    Romantic: { keyword: 'love songs', genreId: 10749 }
 };
 
+const norm = (s) => (s || '').trim().toLowerCase();
+
 const getSpotifyToken = async () => {
-    const url = 'https://accounts.spotify.com/api/token'; 
-    const auth = Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64');
+    const url = 'https://accounts.spotify.com/api/token';
+    const auth = Buffer.from(
+        process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
+    ).toString('base64');
+
     try {
-        const res = await axios.post(url, qs.stringify({ grant_type: 'client_credentials' }), {
-            headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
+        const res = await axios.post(
+            url,
+            qs.stringify({ grant_type: 'client_credentials' }),
+            {
+                headers: {
+                    Authorization: 'Basic ' + auth,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
         return res.data.access_token;
-    } catch (error) { return null; }
+    } catch (error) {
+        return null;
+    }
 };
 
 const getRecommendations = async (req, res) => {
@@ -30,34 +44,48 @@ const getRecommendations = async (req, res) => {
     try {
         const user = await User.findById(userId);
         const config = MOOD_CONFIG[mood];
-        
+
         if (!config) return res.status(400).json({ message: 'Geçersiz Mod' });
 
         const token = await getSpotifyToken();
-        if (!token) throw new Error("Spotify Token Alınamadı");
+        if (!token) throw new Error('Spotify Token Alınamadı');
 
         // ---------------------------------------------------------
         // 🎵 1. MÜZİK TAVSİYESİ
         // ---------------------------------------------------------
-        let searchQuery = config.keyword; 
-        let musicNote = "Popular recommendation";
+        let searchQuery = config.keyword;
+        let musicNote = 'Popular recommendation';
         let usedPersonalization = false;
 
-        // A. Kişiselleştirme Denemesi
-        if (user && user.favoriteTracks && user.favoriteTracks.length > 0) {
-            const matchingFavorites = user.favoriteTracks.filter(t => t.mood === mood);
-            // Eğer o modda favori yoksa genel havuzdan seç
-            const pool = matchingFavorites.length > 0 ? matchingFavorites : user.favoriteTracks;
-            
-            if (pool.length > 0) {
-                const seedFav = pool[Math.floor(Math.random() * pool.length)];
-                
+        // A. Kişiselleştirme Denemesi (SADECE SEÇİLEN MODDAKİ FAVORİLER)
+        if (user && Array.isArray(user.favoriteTracks) && user.favoriteTracks.length > 0) {
+            const matchingFavorites = user.favoriteTracks.filter(
+                (t) => norm(t.mood) === norm(mood)
+            );
+
+            // ✅ Kritik: Eğer bu modda favori yoksa başka mod favorilerine ASLA geçme
+            if (matchingFavorites.length > 0) {
+                const seedFav =
+                    matchingFavorites[
+                        Math.floor(Math.random() * matchingFavorites.length)
+                    ];
+
                 // Veritabanından bak (Spotify'a sormaya gerek yok)
                 const trackInDb = await Track.findOne({ spotifyId: seedFav.spotifyId });
+
                 if (trackInDb && trackInDb.artist) {
                     searchQuery = `${trackInDb.artist} ${mood}`;
                     musicNote = `Similar to "${trackInDb.title}" in your favorites`;
                     usedPersonalization = true;
+                } else {
+                    // DB'de track yoksa bile mood dışına çıkmadan artist üzerinden arama dene
+                    const fallbackArtist =
+                        seedFav.artist || seedFav.artistName || seedFav.name || '';
+                    if (fallbackArtist.trim().length > 0) {
+                        searchQuery = `${fallbackArtist} ${mood}`;
+                        musicNote = `Based on your favorites (seed not found in DB)`;
+                        usedPersonalization = true;
+                    }
                 }
             }
         }
@@ -68,38 +96,49 @@ const getRecommendations = async (req, res) => {
         let tracks = [];
         try {
             const randomOffset = Math.floor(Math.random() * 5);
-            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50&offset=${randomOffset}`;
-            const spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-            
+            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+                searchQuery
+            )}&type=track&limit=50&offset=${randomOffset}`;
+            const spotifyRes = await axios.get(spotifyUrl, {
+                headers: { Authorization: 'Bearer ' + token }
+            });
+
             if (spotifyRes.data.tracks && spotifyRes.data.tracks.items) {
                 tracks = spotifyRes.data.tracks.items;
             }
         } catch (err) {
-            console.log("Spotify Arama Hatası (Yedeğe geçiliyor):", err.message);
+            console.log('Spotify Arama Hatası (Yedeğe geçiliyor):', err.message);
         }
 
-        // C. Sonuç Yoksa Yedek Arama
+        // C. Sonuç Yoksa Yedek Arama (Sadece kişiselleştirme denendiyse)
         if (tracks.length === 0 && usedPersonalization) {
-            console.log("⚠️ Kişisel sonuç boş, genel arama yapılıyor...");
+            console.log('⚠️ Kişisel sonuç boş, genel arama yapılıyor...');
             searchQuery = config.keyword;
-            musicNote = "Moduna uygun hit";
-            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50`;
-            const spotifyRes = await axios.get(spotifyUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+            musicNote = 'Moduna uygun hit';
+
+            const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+                searchQuery
+            )}&type=track&limit=50`;
+            const spotifyRes = await axios.get(spotifyUrl, {
+                headers: { Authorization: 'Bearer ' + token }
+            });
             tracks = spotifyRes.data.tracks?.items || [];
         }
 
-        if (tracks.length === 0) throw new Error("Spotify şarkı bulamadı.");
+        if (tracks.length === 0) throw new Error('Spotify şarkı bulamadı.');
 
         // 🔥 KALİTE KONTROLÜ 🔥
         // Popülerliğe göre sırala, en iyi 10'u al
         tracks.sort((a, b) => b.popularity - a.popularity);
         const topTracks = tracks.slice(0, 10);
-        const recommendedTrackData = topTracks[Math.floor(Math.random() * topTracks.length)];
+        const recommendedTrackData =
+            topTracks[Math.floor(Math.random() * topTracks.length)];
 
         // ⚠️ GÜVENLİK KONTROLÜ: Sanatçı var mı?
-        const artistName = (recommendedTrackData.artists && recommendedTrackData.artists.length > 0) 
-            ? recommendedTrackData.artists[0].name 
-            : "Bilinmeyen Sanatçı";
+        const artistName =
+            recommendedTrackData.artists && recommendedTrackData.artists.length > 0
+                ? recommendedTrackData.artists[0].name
+                : 'Bilinmeyen Sanatçı';
 
         const recommendedTrack = {
             id: recommendedTrackData.id,
@@ -110,48 +149,60 @@ const getRecommendations = async (req, res) => {
             spotifyUrl: recommendedTrackData.external_urls.spotify
         };
 
-
         // ---------------------------------------------------------
         // 🎬 2. FİLM TAVSİYESİ (GÜVENLİ)
         // ---------------------------------------------------------
-        let movieUrl = "";
-        let movieNote = "Popular film";
+        let movieUrl = '';
+        let movieNote = 'Popular film';
         let movieResults = [];
 
-        const matchingMovies = user.favoriteMovies ? user.favoriteMovies.filter(m => m.mood === mood) : [];
+        const matchingMovies = user?.favoriteMovies
+            ? user.favoriteMovies.filter((m) => norm(m.mood) === norm(mood))
+            : [];
 
         // Favori Filmden Benzer Bulma
         if (matchingMovies.length > 0) {
-            const seedMovie = matchingMovies[Math.floor(Math.random() * matchingMovies.length)];
+            const seedMovie =
+                matchingMovies[Math.floor(Math.random() * matchingMovies.length)];
             movieUrl = `https://api.themoviedb.org/3/movie/${seedMovie.tmdbId}/recommendations?api_key=${process.env.TMDB_API_KEY}&language=en-US&page=1`;
-            movieNote = "Similar to the movies in your favorites";
-            
+            movieNote = 'Similar to the movies in your favorites';
+
             try {
                 const tmdbRes = await axios.get(movieUrl);
                 movieResults = tmdbRes.data.results || [];
-            } catch (err) { /* Hata olursa genel aramaya düşecek */ }
+            } catch (err) {
+                // Hata olursa genel aramaya düşecek
+            }
         }
 
         // Eğer sonuç yoksa Genel Keşif
         if (movieResults.length === 0) {
-            movieUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.TMDB_API_KEY}&with_genres=${config.genreId}&sort_by=popularity.desc&vote_count.gte=300&page=${Math.floor(Math.random()*3)+1}`;
+            movieUrl = `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.TMDB_API_KEY}&with_genres=${config.genreId}&sort_by=popularity.desc&vote_count.gte=300&page=${
+                Math.floor(Math.random() * 3) + 1
+            }`;
             const tmdbRes = await axios.get(movieUrl);
             movieResults = tmdbRes.data.results || [];
         }
 
         // Rastgele Seçim (Top 10 içinden)
         const topMovies = movieResults.slice(0, 10);
-        const movieData = topMovies.length > 0 ? topMovies[Math.floor(Math.random() * topMovies.length)] : null;
+        const movieData =
+            topMovies.length > 0
+                ? topMovies[Math.floor(Math.random() * topMovies.length)]
+                : null;
 
-        const recommendedMovie = movieData ? {
-            id: movieData.id,
-            title: movieData.title,
-            overview: movieData.overview,
-            poster: movieData.poster_path ? `https://image.tmdb.org/t/p/w500${movieData.poster_path}` : null,
-            rating: movieData.vote_average,
-            releaseDate: movieData.release_date
-        } : null;
-
+        const recommendedMovie = movieData
+            ? {
+                  id: movieData.id,
+                  title: movieData.title,
+                  overview: movieData.overview,
+                  poster: movieData.poster_path
+                      ? `https://image.tmdb.org/t/p/w500${movieData.poster_path}`
+                      : null,
+                  rating: movieData.vote_average,
+                  releaseDate: movieData.release_date
+              }
+            : null;
 
         // ---------------------------------------------------------
         // 💾 3. KAYDET
@@ -165,7 +216,7 @@ const getRecommendations = async (req, res) => {
                     name: recommendedTrack.name,
                     artist: recommendedTrack.artist,
                     image: recommendedTrack.image,
-                    previewUrl: recommendedTrack.preview_url,
+                    previewUrl: recommendedTrack.previewUrl,
                     externalUrl: recommendedTrack.spotifyUrl
                 },
                 movie: {
@@ -179,16 +230,14 @@ const getRecommendations = async (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             track: recommendedTrack,
             movie: recommendedMovie,
             notes: { music: musicNote, movie: movieNote }
         });
-
     } catch (error) {
-        console.error("Algoritma Hatası:", error.message);
-        // Detaylı hata yerine genel mesaj dönüyoruz ki frontend patlamasın
-        res.status(500).json({ message: 'Tavsiye alınamadı' });
+        console.error('Algoritma Hatası:', error.message);
+        return res.status(500).json({ message: 'Tavsiye alınamadı' });
     }
 };
 
@@ -208,7 +257,7 @@ const getRecommendationsForAI = async (req, res) => {
 
         // --- Spotify Token ---
         const token = await getSpotifyToken();
-        if (!token) throw new Error("Spotify Token Alınamadı");
+        if (!token) throw new Error('Spotify Token Alınamadı');
 
         // ============================
         // 🎵 1) MÜZİK (BASİT ARAMA)
@@ -223,7 +272,7 @@ const getRecommendationsForAI = async (req, res) => {
 
         const tracks = spotifyRes.data.tracks?.items || [];
         if (tracks.length === 0) {
-            throw new Error("Spotify sonuç döndürmedi (AI).");
+            throw new Error('Spotify sonuç döndürmedi (AI).');
         }
 
         const trackData = tracks[Math.floor(Math.random() * tracks.length)];
@@ -272,9 +321,7 @@ const getRecommendationsForAI = async (req, res) => {
         });
     } catch (error) {
         console.error('AI Recommendation Error:', error.message);
-        return res
-            .status(500)
-            .json({ message: 'AI tavsiyesi alınamadı' });
+        return res.status(500).json({ message: 'AI tavsiyesi alınamadı' });
     }
 };
 

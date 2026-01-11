@@ -21,3 +21,14 @@
     --color-primary: 129 140 248;      /* indigo-400 */
   }
 }
+
+
+html {
+  overflow-y: scroll;        /* scrollbar alanı her zaman rezerve edilir */
+  scrollbar-gutter: stable;  /* destekleyen tarayıcılarda daha da stabil */
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;        /* yatay taşma olursa engelle */
+}

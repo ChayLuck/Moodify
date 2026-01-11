@@ -40,7 +40,7 @@ const Dashboard = () => {
 
   const MOODS = [
     { name: "Happy", color: "bg-yellow-500 text-white" },
-    { name: "Sad",color: "bg-blue-600 text-white" },
+    { name: "Sad", color: "bg-blue-600 text-white" },
     { name: "Energetic", color: "bg-red-500 text-white" },
     { name: "Chill", color: "bg-green-500 text-white" },
     { name: "Romantic", color: "bg-pink-500 text-white" },
@@ -57,13 +57,10 @@ const Dashboard = () => {
 
     try {
       // 1) Recommendation al
-      const res = await axios.post(
-        "http://localhost:5000/api/recommendations",
-        {
-          userId: currentUserId,
-          mood: selectedMood,
-        }
-      );
+      const res = await axios.post("http://localhost:5000/api/recommendations", {
+        userId: currentUserId,
+        mood: selectedMood,
+      });
 
       setResult(res.data);
 
@@ -180,17 +177,14 @@ const Dashboard = () => {
           mood: mood,
         });
       } else {
-        await axios.post(
-          "http://localhost:5000/api/users/favorites/add-movie",
-          {
-            userId: user._id,
-            movie: {
-              id: itemToFavorite.data.id,
-              title: itemToFavorite.data.title,
-            },
-            mood: mood,
-          }
-        );
+        await axios.post("http://localhost:5000/api/users/favorites/add-movie", {
+          userId: user._id,
+          movie: {
+            id: itemToFavorite.data.id,
+            title: itemToFavorite.data.title,
+          },
+          mood: mood,
+        });
       }
 
       showToast("success", `Added to favorites as ${mood}! ❤️`);
@@ -203,20 +197,16 @@ const Dashboard = () => {
   };
 
   const MOOD_IMAGES = {
-    Happy:
-      "/assets/happy.png", // Parti / Neşe
-    Sad: "/assets/sad.png", // Yağmurlu cam / Melankoli
-    Energetic:
-      "/assets/energetic.png", // Konser / Ateş / Koşu
-    Chill:
-      "/assets/chill.png", // Doğa / Kahve / Cinque Terre
-    Romantic:
-      "/assets/romantic.avif", // Gün batımı / Çift
+    Happy: "/assets/happy.png",
+    Sad: "/assets/sad.png",
+    Energetic: "/assets/energetic.png",
+    Chill: "/assets/chill.png",
+    Romantic: "/assets/romantic.avif",
   };
 
   return (
-    <div className="h-[calc(100vh-75px)] w-full overflow-hidden bg-mainBg text-mainText p-4 md:p-10 pb-32 transition-all duration-500">
-      <div className="max-w-6xl mx-auto text-center">
+    <div className="min-h-[calc(100vh-80px)] w-full bg-mainBg text-mainText px-4 md:px-10 py-6 md:py-8 transition-all duration-500 flex items-center justify-center">
+      <div className="w-full max-w-6xl mx-auto text-center">
         {/* HEADER */}
         <h1 className="text-4xl font-bold mb-4">
           Hello, <span className="text-indigo-400">{user?.username}</span>
@@ -224,55 +214,67 @@ const Dashboard = () => {
         <p className="mb-8 text-lg">How are you feeling right now?</p>
 
         {/* --- MOOD BUTTONS (HERO vs COMPACT MODE) --- */}
-        <div className={
-            !result 
-            /* Vitrin Modu: Görselli 3x2 Grid (Üstte 2 geniş, altta 3 kare) */
-            ? "grid grid-cols-2 md:grid-cols-6 gap-4 w-full max-w-5xl mx-auto mt-8" 
-            /* Sonuç Modu: Orijinal Flex Yapısı (Eski haline dönüyor) */
-            : "flex flex-wrap justify-center gap-4 mb-12 transition-all duration-500"
-        }>
+        <div
+          className={
+            !result
+              ? "grid grid-cols-2 md:grid-cols-6 gap-4 w-full max-w-5xl mx-auto mt-4"
+              : "flex flex-wrap justify-center gap-4 mb-12 transition-all duration-500"
+          }
+        >
           {MOODS.map((m, index) => {
-             // Grid Düzeni: İlk 2 kart geniş (span-3), diğerleri kare (span-2)
-             const gridSpanClass = index < 2 ? "md:col-span-3 aspect-[2/1]" : "md:col-span-2 aspect-square";
-             
-             return (
-                <button
-                  key={m.name}
-                  onClick={() => handleMoodSelect(m.name)}
-                  className={`
-                    relative overflow-hidden rounded-2xl font-bold transition-all duration-300 transform shadow-lg group
-                    ${!result 
-                        /* Vitrin Stili (Resimli) */
-                        ? `${gridSpanClass} hover:scale-[1.02] hover:shadow-2xl text-white flex flex-col justify-end p-6 text-left` 
-                        /* Sonuç Stili (Orijinal Renkli Butonlar) */
-                        : `${m.color} px-8 py-4 text-xl hover:scale-110 opacity-80 hover:opacity-100 flex items-center` 
-                    }
-                    ${mood === m.name && result ? "ring-4 ring-white scale-110 opacity-100" : ""}
-                  `}
-                >
-                  {/* SADECE VİTRİN MODUNDA: Arka Plan Resmi ve Karartma */}
-                  {!result && (
-                      <>
-                        <div 
-                            className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
-                            style={{ backgroundImage: `url(${MOOD_IMAGES[m.name]})` }}
-                        />
-                        {/* Resmin üzerine hafif renkli filtre + karartma */}
-                        <div className={`absolute inset-0 bg-gradient-to-t ${m.color.replace('bg-', 'from-').replace('500', '900')}/90 to-transparent opacity-60 group-hover:opacity-80 transition-opacity`} />
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                      </>
-                  )}
+            const gridSpanClass =
+              index < 2
+                ? "md:col-span-3 aspect-[2/1]"
+                : "md:col-span-2 aspect-square";
 
-                  {/* İçerik: Vitrinde altta ve büyük, Sonuçta yan yana ve küçük */}
-                  <div className="relative z-10">
-                      <span className={!result ? "text-5xl md:text-6xl mb-2 block drop-shadow-md" : "mr-2 inline"}>
-                        {m.emoji}
-                      </span> 
-                      <span className={!result ? "text-3xl md:text-4xl drop-shadow-md" : ""}>
-                        {m.name}
-                      </span>
-                  </div>
-                </button>
+            return (
+              <button
+                key={m.name}
+                onClick={() => handleMoodSelect(m.name)}
+                className={`
+                  relative overflow-hidden rounded-2xl font-bold transition-all duration-300 transform shadow-lg group
+                  ${
+                    !result
+                      ? `${gridSpanClass} hover:scale-[1.02] hover:shadow-2xl text-white flex flex-col justify-end p-6 text-left`
+                      : `${m.color} px-8 py-4 text-xl hover:scale-110 opacity-80 hover:opacity-100 flex items-center`
+                  }
+                  ${mood === m.name && result ? "ring-4 ring-white scale-110 opacity-100" : ""}
+                `}
+              >
+                {!result && (
+                  <>
+                    <div
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
+                      style={{ backgroundImage: `url(${MOOD_IMAGES[m.name]})` }}
+                    />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-t ${m.color
+                        .replace("bg-", "from-")
+                        .replace("500", "900")}/90 to-transparent opacity-60 group-hover:opacity-80 transition-opacity`}
+                    />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                  </>
+                )}
+
+                <div className="relative z-10">
+                  <span
+                    className={
+                      !result
+                        ? "text-5xl md:text-6xl mb-2 block drop-shadow-md"
+                        : "mr-2 inline"
+                    }
+                  >
+                    {m.emoji}
+                  </span>
+                  <span
+                    className={
+                      !result ? "text-3xl md:text-4xl drop-shadow-md" : ""
+                    }
+                  >
+                    {m.name}
+                  </span>
+                </div>
+              </button>
             );
           })}
         </div>
@@ -404,8 +406,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* --- EXTRA MODALS --- */}
-
       {/* Mood Feedback Modal */}
       {showMoodModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-md animate-fade-in">
@@ -458,13 +458,9 @@ const Dashboard = () => {
         track={selectedTrack}
         loading={modalLoading}
         onClose={closeModal}
-        onPlay={
-          selectedTrack ? () => setPlayingTrack(selectedTrack.id) : undefined
-        }
+        onPlay={selectedTrack ? () => setPlayingTrack(selectedTrack.id) : undefined}
         onFavorite={
-          selectedTrack
-            ? () => initiateFavorite("track", selectedTrack)
-            : undefined
+          selectedTrack ? () => initiateFavorite("track", selectedTrack) : undefined
         }
       />
 
