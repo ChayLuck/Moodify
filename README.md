@@ -6,13 +6,17 @@ Moodify: Discover Entertainment That Matches Your Vibe 🎵🎬
 
 🚀 Introduction
 
-Moodify is a full-stack web application designed to solve decision paralysis by recommending movies and music based on your current emotional state.
+Moodify is a personalized, mood-based recommendation platform designed to bridge the gap between human emotions and digital entertainment. Unlike traditional streaming algorithms that rely solely on viewing history or genre matching, Moodify asks the user a simple yet powerful question: "How are you feeling right now?"
 
-Unlike traditional algorithms that rely solely on viewing history, Moodify asks, "How are you feeling?" and curates a personalized mix of entertainment using the Spotify and TMDB (The Movie Database) APIs. Whether you are feeling Happy, Sad, Energetic, Chill, or Romantic, Moodify has something for you.
+By integrating the vast libraries of Spotify and The Movie Database (TMDB), Moodify creates a unique cross-domain experience. Whether you are feeling Happy, Sad, Energetic, Chill, or Romantic, the application curates a synchronized pair of music and movie recommendations tailored specifically to your current emotional state.
+
+To support this interaction, Moodify optionally uses an AI-based mood interpretation feature that helps translate free-text user input into one of the predefined mood categories. This AI component does not replace the recommendation logic; instead, it assists users who prefer expressing their emotions naturally rather than selecting a mood manually.
 
 ✨ Key Features
 
 🎭 Mood-Based Engine: Select your mood and get instant, tailored recommendations for both a movie and a song.
+
+🧠 AI-Assisted Mood Interpretation (Supportive Layer): When users describe their feelings in natural language, an AI service analyzes the text and maps it to the closest mood category or requests clarification if the input is ambiguous. This feature exists solely to improve input accuracy and user convenience, while the recommendation algorithm remains rule-based and deterministic.
 
 🎧 Integrated Spotify Player: Listen to recommended tracks directly within the app using the embedded player.
 
