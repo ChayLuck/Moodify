@@ -4,10 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 import MovieDetailModal from "../components/MovieDetailModal";
 import TrailerModal from "../components/TrailerModal";
-
 import TrackDetailModal from "../components/TrackDetailModal";
 import PlayerBar from "../components/PlayerBar";
-import { useToast } from "../context/ToastContext"; // ✅ GLOBAL TOAST
+import { useToast } from "../context/ToastContext";
 
 const Dashboard = () => {
   const [mood, setMood] = useState("");
@@ -16,7 +15,6 @@ const Dashboard = () => {
 
   // --- UI STATES ---
   const [playingTrack, setPlayingTrack] = useState(null);
-
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -32,7 +30,7 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
-  const { showToast } = useToast(); // ✅ TOAST HOOK
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!user) navigate("/login");
@@ -48,15 +46,13 @@ const Dashboard = () => {
 
   const currentUserId = user?._id || null;
 
-  // --- TAVSİYE İSTEĞİ ---
   const handleMoodSelect = async (selectedMood) => {
     setMood(selectedMood);
     setLoading(true);
-    setResult(null);
+    setResult(null); // Önceki sonuçları temizle
     setPlayingTrack(null);
 
     try {
-      // 1) Recommendation al
       const res = await axios.post("http://localhost:5000/api/recommendations", {
         userId: currentUserId,
         mood: selectedMood,
@@ -64,18 +60,15 @@ const Dashboard = () => {
 
       setResult(res.data);
 
-      // 2) Mood + Recommendation birlikte track et
       await axios.post("http://localhost:5000/api/mood/track", {
         mood: selectedMood,
         userId: currentUserId,
-        // 🎵 TRACK
         recommendedTrack: {
           id: res.data.track.id,
           name: res.data.track.name,
           artist: res.data.track.artist,
           image: res.data.track.image,
         },
-        // 🎬 MOVIE
         recommendedMovie: {
           id: res.data.movie.id,
           title: res.data.movie.title,
@@ -90,7 +83,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- DETAY GETİRME ---
   const openMovieModal = async (movieId) => {
     setModalLoading(true);
     setSelectedMovie({ id: movieId });
@@ -129,17 +121,14 @@ const Dashboard = () => {
     document.body.style.overflow = "auto";
   };
 
-  // --- TRAILER FETCH ---
   const fetchTrailer = async (movieId) => {
     setTrailerLoading(true);
     setTrailerUrl(null);
     setShowTrailerModal(true);
-
     try {
       const res = await axios.get(
         `http://localhost:5000/api/movies/trailer/${movieId}`
       );
-
       if (!res.data.trailer) {
         showToast("info", "Trailer not found 🎬❌");
         setShowTrailerModal(false);
@@ -155,7 +144,6 @@ const Dashboard = () => {
     }
   };
 
-  // --- FAVORİ EKLEME ---
   const initiateFavorite = (type, data) => {
     setItemToFavorite({ type, data });
     setShowMoodModal(true);
@@ -186,7 +174,6 @@ const Dashboard = () => {
           mood: mood,
         });
       }
-
       showToast("success", `Added to favorites as ${mood}! ❤️`);
       setShowMoodModal(false);
     } catch (error) {
@@ -204,6 +191,11 @@ const Dashboard = () => {
     Romantic: "/assets/romantic.avif",
   };
 
+  // --- UI MANTIĞI ---
+  // Eğer sonuç yoksa VE loading değilse -> Büyük Grid (İlk Açılış)
+  // Eğer sonuç varsa VEYA loading ise -> Kompakt Top Bar (Seçim Sonrası)
+  const isCompactMode = result || loading;
+
   return (
     <div className="min-h-[calc(100vh-80px)] w-full bg-mainBg text-mainText px-4 md:px-10 py-6 md:py-8 transition-all duration-500 flex items-center justify-center">
       <div className="w-full max-w-6xl mx-auto text-center">
@@ -213,10 +205,11 @@ const Dashboard = () => {
         </h1>
         <p className="mb-8 text-lg">How are you feeling right now?</p>
 
-        {/* --- MOOD BUTTONS (HERO vs COMPACT MODE) --- */}
+        {/* --- MOOD BUTTONS --- */}
+        {/* Butonları loading'de gizlemiyoruz, sadece stili değişiyor */}
         <div
           className={
-            !result
+            !isCompactMode
               ? "grid grid-cols-2 md:grid-cols-6 gap-4 w-full max-w-5xl mx-auto mt-4"
               : "flex flex-wrap justify-center gap-4 mb-12 transition-all duration-500"
           }
@@ -227,21 +220,29 @@ const Dashboard = () => {
                 ? "md:col-span-3 aspect-[2/1]"
                 : "md:col-span-2 aspect-square";
 
+            // Seçilen mood ise highlight yap
+            const isSelected = mood === m.name;
+
             return (
               <button
                 key={m.name}
                 onClick={() => handleMoodSelect(m.name)}
-                className={`
-                  relative overflow-hidden rounded-2xl font-bold transition-all duration-300 transform shadow-lg group
+                disabled={loading && isSelected} // Sadece seçili olan tekrar tıklanmasın (opsiyonel)
+                className={`relative overflow-hidden rounded-2xl font-bold transition-all duration-300 transform shadow-lg group
                   ${
-                    !result
+                    !isCompactMode
                       ? `${gridSpanClass} hover:scale-[1.02] hover:shadow-2xl text-white flex flex-col justify-end p-6 text-left`
                       : `${m.color} px-8 py-4 text-xl hover:scale-110 opacity-80 hover:opacity-100 flex items-center`
                   }
-                  ${mood === m.name && result ? "ring-4 ring-white scale-110 opacity-100" : ""}
+                  ${
+                    // Seçiliyken biraz daha belirgin yapalım
+                    isSelected && isCompactMode
+                      ? "ring-4 ring-white scale-110 opacity-100"
+                      : ""
+                  }
                 `}
               >
-                {!result && (
+                {!isCompactMode && (
                   <>
                     <div
                       className="absolute inset-0 bg-cover bg-center transition-transform duration-700"
@@ -259,7 +260,7 @@ const Dashboard = () => {
                 <div className="relative z-10">
                   <span
                     className={
-                      !result
+                      !isCompactMode
                         ? "text-5xl md:text-6xl mb-2 block drop-shadow-md"
                         : "mr-2 inline"
                     }
@@ -268,7 +269,7 @@ const Dashboard = () => {
                   </span>
                   <span
                     className={
-                      !result ? "text-3xl md:text-4xl drop-shadow-md" : ""
+                      !isCompactMode ? "text-3xl md:text-4xl drop-shadow-md" : ""
                     }
                   >
                     {m.name}
@@ -279,11 +280,12 @@ const Dashboard = () => {
           })}
         </div>
 
-        {/* LOADING STATE */}
+        {/* LOADING STATE (Butonların altında belirir) */}
         {loading && (
-          <div className="animate-pulse text-2xl text-indigo-500 mt-10">
-            Analyzing your favorites... <br />
-            <span className="text-sm text-gray-800">
+          <div className="animate-pulse text-2xl text-indigo-500 mt-10 min-h-[400px] flex flex-col items-center justify-center">
+             {/* Burayı flex center yaparak loading yazısını ortaladım */}
+            <p>Analyzing your favorites...</p>
+            <span className="text-sm text-gray-400 mt-2">
               Finding the perfect match for a {mood} mood
             </span>
           </div>
@@ -315,11 +317,9 @@ const Dashboard = () => {
                 <p className="text-gray-400 text-lg mb-4">
                   {result.track?.artist}
                 </p>
-
                 <div className="bg-indigo-400/20 p-3 rounded-lg text-sm mb-6 border-l-4 border-indigo-500">
                   {result.notes?.music}
                 </div>
-
                 <div className="mt-auto flex gap-3">
                   <button
                     onClick={(e) => {
@@ -371,15 +371,12 @@ const Dashboard = () => {
                     ? result.movie.releaseDate.split("-")[0]
                     : "N/A"}
                 </p>
-
                 <div className="bg-indigo-400/20 p-3 rounded-lg text-sm mb-6 border-l-4 border-indigo-500">
                   {result.notes?.movie}
                 </div>
-
                 <p className="text-sm line-clamp-2 mb-4">
                   {result.movie?.overview}
                 </p>
-
                 <div className="mt-auto flex gap-3">
                   <button
                     onClick={(e) => {
@@ -435,7 +432,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Movie Detail */}
+      {/* Modals */}
       <MovieDetailModal
         movie={selectedMovie}
         loading={modalLoading}
@@ -443,16 +440,12 @@ const Dashboard = () => {
         onFavorite={() => initiateFavorite("movie", selectedMovie)}
         onWatchTrailer={() => fetchTrailer(selectedMovie.id)}
       />
-
-      {/* Trailer Modal */}
       <TrailerModal
         isOpen={showTrailerModal}
         trailerUrl={trailerUrl}
         loading={trailerLoading}
         onClose={() => setShowTrailerModal(false)}
       />
-
-      {/* Music Modal */}
       <TrackDetailModal
         open={!!selectedTrack}
         track={selectedTrack}
@@ -463,8 +456,6 @@ const Dashboard = () => {
           selectedTrack ? () => initiateFavorite("track", selectedTrack) : undefined
         }
       />
-
-      {/* PLAYER */}
       <PlayerBar
         trackId={playingTrack}
         onClose={() => setPlayingTrack(null)}
