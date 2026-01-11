@@ -2,7 +2,7 @@
 
 Moodify: Discover Entertainment That Matches Your Vibe 🎵🎬
 
-(banner image)
+![WhatsApp Image 2026-01-11 at 03 05 4722](https://github.com/user-attachments/assets/65578b38-1404-4687-af7e-36511614d917)
 
 🚀 Introduction
 
@@ -26,29 +26,18 @@ Unlike traditional algorithms that rely solely on viewing history, Moodify asks,
 
 📸 Screenshots
 
-Home Page
 
-Dashboard
+![WhatsApp Image 2026-01-11 at 03 05 47](https://github.com/user-attachments/assets/5dd5946f-2d2a-469b-9bb8-d1b7cda84865)
 
+![WhatsApp Image 2026-01-11 at 03 08 11](https://github.com/user-attachments/assets/999e30a3-b4cb-4996-82df-f301a59e8246)
 
+![WhatsApp Image 2026-01-11 at 03 09 16](https://github.com/user-attachments/assets/74b49f1a-9161-469f-8c42-3364727a0e95)
 
+![WhatsApp Image 2026-01-11 at 03 10 02](https://github.com/user-attachments/assets/0e178342-cccf-4506-bc30-987c257f70ba)
 
+![WhatsApp Image 2026-01-11 at 03 10 50](https://github.com/user-attachments/assets/7a918d0f-5a8c-455a-a658-4331ddff86a3)
 
-Landing page with trending content
-
-Mood selection and results
-
-Movie Details
-
-Music Player
-
-
-
-
-
-Detailed movie info with trailer
-
-Embedded Spotify player
+![WhatsApp Image 2026-01-11 at 03 11 27](https://github.com/user-attachments/assets/8d809f80-bc36-4ad9-a5be-1c48c8317301)
 
 
 
@@ -65,6 +54,8 @@ Database: MongoDB
 APIs: Spotify Web API, TMDB API.
 
 Authentication: JWT (JSON Web Tokens).
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 ⚙️ Installation & Setup
 
@@ -100,12 +91,12 @@ PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_super_secret_key
 
-# Spotify API
+//Spotify API
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:5000/callback
 
-# TMDB API
+//TMDB API
 TMDB_API_KEY=your_tmdb_api_key
 
 
@@ -115,6 +106,8 @@ npx nodemon index.js
 
 
 (You should see "Server running on port 5000" and "MongoDB Connected")
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 3. Frontend Setup
 
@@ -130,6 +123,8 @@ npm start
 
 
 (The app should open at http://localhost:3000)
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 🧠 How the Algorithm Works
 
@@ -147,6 +142,8 @@ Filtering: Results are sorted by popularity to ensure high-quality recommendatio
 
 Pairing: A movie with a matching genre (e.g., Drama for "Sad") is fetched from TMDB to complete the experience.
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
 🤝 Contributing
 
 Contributions are welcome! If you have suggestions or bug fixes:
@@ -160,6 +157,8 @@ Commit your changes (git commit -m 'Add some AmazingFeature').
 Push to the branch (git push origin feature/AmazingFeature).
 
 Open a Pull Request.
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 📄 License
 
